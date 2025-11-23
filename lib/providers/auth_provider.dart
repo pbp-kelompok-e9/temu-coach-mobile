@@ -66,6 +66,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> registerCustomer({
     required String username,
+    required String email,
     required String password1,
     required String password2,
     String? firstName,
@@ -77,6 +78,7 @@ class AuthProvider with ChangeNotifier {
     try {
       final result = await _authService.registerCustomer(
         username: username,
+        email: email,
         password1: password1,
         password2: password2,
         firstName: firstName,
@@ -101,6 +103,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> registerCoach({
     required String username,
+    required String email,
     required String password1,
     required String password2,
     String? firstName,
@@ -119,6 +122,7 @@ class AuthProvider with ChangeNotifier {
     try {
       final result = await _authService.registerCoach(
         username: username,
+        email: email,
         password1: password1,
         password2: password2,
         firstName: firstName,

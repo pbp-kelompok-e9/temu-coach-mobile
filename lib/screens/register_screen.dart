@@ -14,6 +14,7 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _password1Controller = TextEditingController();
@@ -35,6 +36,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void dispose() {
     _usernameController.dispose();
+    _emailController.dispose();
     _firstNameController.dispose();
     _lastNameController.dispose();
     _password1Controller.dispose();
@@ -58,6 +60,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_userType == 'customer') {
       success = await authProvider.registerCustomer(
         username: _usernameController.text.trim(),
+        email: _emailController.text.trim(),
         password1: _password1Controller.text,
         password2: _password2Controller.text,
         firstName: _firstNameController.text.trim(),
@@ -66,6 +69,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } else {
       success = await authProvider.registerCoach(
         username: _usernameController.text.trim(),
+        email: _emailController.text.trim(),
         password1: _password1Controller.text,
         password2: _password2Controller.text,
         firstName: _firstNameController.text.trim(),
@@ -218,6 +222,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Username harus diisi';
+                      }
+                      return null;
+                    },
+                    enabled: !authProvider.isLoading,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: const InputDecoration(
+                      labelText: 'Email *',
+                      hintText: 'Masukkan email',
+                      prefixIcon: Icon(Icons.email_outlined),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Email harus diisi';
+                      }
+                      if (!value.contains('@')) {
+                        return 'Email tidak valid';
                       }
                       return null;
                     },
