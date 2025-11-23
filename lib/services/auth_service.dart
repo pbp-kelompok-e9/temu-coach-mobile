@@ -44,6 +44,7 @@ class AuthService {
 
   Future<Map<String, dynamic>> registerCustomer({
     required String username,
+    required String email,
     required String password1,
     required String password2,
     String? firstName,
@@ -54,6 +55,7 @@ class AuthService {
         '$baseUrl/accounts/api/register/',
         jsonEncode({
           'username': username,
+          'email': email,
           'password1': password1,
           'password2': password2,
           'first_name': firstName ?? '',
@@ -86,6 +88,7 @@ class AuthService {
 
   Future<Map<String, dynamic>> registerCoach({
     required String username,
+    required String email,
     required String password1,
     required String password2,
     String? firstName,
@@ -103,6 +106,7 @@ class AuthService {
         '$baseUrl/accounts/api/register/',
         jsonEncode({
           'username': username,
+          'email': email,
           'password1': password1,
           'password2': password2,
           'first_name': firstName ?? '',
