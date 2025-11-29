@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'providers/auth_provider.dart';
+import 'providers/coach_provider.dart';
 import 'screens/login_screen.dart';
 import 'theme/app_theme.dart';
 
@@ -25,6 +26,11 @@ class MyApp extends StatelessWidget {
           ),
           update: (context, request, previous) =>
               previous ?? AuthProvider(request),
+        ),
+        ChangeNotifierProvider<CoachProvider>(
+          create: (context) => CoachProvider(
+            Provider.of<CookieRequest>(context, listen: false),
+          ),
         ),
       ],
       child: MaterialApp(
