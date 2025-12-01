@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'admin_screen.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import 'register_screen.dart';
@@ -38,10 +39,17 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (success) {
-      // Navigate to home/catalog
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const CoachCatalogScreen()),
-      );
+      final user = authProvider.user!;
+
+      if (user.isAdmin) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const AdminScreen()),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const CoachCatalogScreen()),
+        );
+      }
     } else {
       // Show error
       ScaffoldMessenger.of(context).showSnackBar(

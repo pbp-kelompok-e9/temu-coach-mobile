@@ -6,6 +6,7 @@ class UserModel {
   final String userType;
   final bool isCoach;
   final bool isCustomer;
+  final bool isAdmin;
 
   UserModel({
     required this.id,
@@ -15,6 +16,7 @@ class UserModel {
     required this.userType,
     required this.isCoach,
     required this.isCustomer,
+    required this.isAdmin,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class UserModel {
       userType: json['user_type'] ?? 'customer',
       isCoach: json['is_coach'] ?? false,
       isCustomer: json['is_customer'] ?? true,
+      isAdmin: json['is_admin'] ?? false,
     );
   }
 
@@ -38,6 +41,7 @@ class UserModel {
       'user_type': userType,
       'is_coach': isCoach,
       'is_customer': isCustomer,
+      'is_admin': isAdmin,
     };
   }
 
