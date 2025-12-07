@@ -21,6 +21,7 @@ class AuthProvider with ChangeNotifier {
   bool get isLoggedIn => _authService.isLoggedIn && _user != null;
   bool get isCoach => _user?.isCoach ?? false;
   bool get isCustomer => _user?.isCustomer ?? true;
+  bool get isAdmin => _user?.isAdmin ?? false;
 
   void _setLoading(bool value) {
     _isLoading = value;
