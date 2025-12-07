@@ -1,11 +1,8 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
 import '../providers/coach_provider.dart';
+import '../models/coach_model.dart';
 import '../theme/app_theme.dart';
-import 'login_screen.dart';
-import '../widgets/coach_card.dart';
 import 'coach_detail_screen.dart';
 
 class CoachCatalogScreen extends StatefulWidget {
@@ -16,258 +13,397 @@ class CoachCatalogScreen extends StatefulWidget {
 }
 
 class _CoachCatalogScreenState extends State<CoachCatalogScreen> {
-  late final CoachProvider coachProvider;
-  Timer? _debounce;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String _selectedCountry = 'all';
+  String _sortBy = 'name'; // name or rate
+  final ScrollController _scrollController = ScrollController();
+  bool _showScrollToTop = false;
 
   @override
   void initState() {
     super.initState();
-    // Delay fetch until first frame so provider is available
+    _scrollController.addListener(_scrollListener);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      coachProvider = Provider.of<CoachProvider>(context, listen: false);
-      coachProvider.fetchCoaches();
+      context.read<CoachProvider>().fetchCoaches();
     });
+  }
+
+  void _scrollListener() {
+    if (_scrollController.offset > 300 && !_showScrollToTop) {
+      setState(() {
+        _showScrollToTop = true;
+      });
+    } else if (_scrollController.offset <= 300 && _showScrollToTop) {
+      setState(() {
+        _showScrollToTop = false;
+      });
+    }
+  }
+
+  void _scrollToTop() {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
   void dispose() {
-    _debounce?.cancel();
+    _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  List<Coach> _filterAndSortCoaches(List<Coach> coaches) {
+    var filtered = coaches.where((coach) {
+      final matchesSearch = coach.name.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchesCountry = _selectedCountry == 'all' || coach.citizenship == _selectedCountry;
+      return matchesSearch && matchesCountry;
+    }).toList();
+
+    if (_sortBy == 'name') {
+      filtered.sort((a, b) => a.name.compareTo(b.name));
+    } else if (_sortBy == 'rate') {
+      filtered.sort((a, b) => a.ratePerSession.compareTo(b.ratePerSession));
+    }
+
+    return filtered;
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final provider = Provider.of<CoachProvider>(context);
-
     return Scaffold(
+      backgroundColor: AppColors.gray100,
       appBar: AppBar(
-        title: const Text('TemuCoach'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_outlined),
-            onPressed: () async {
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Logout'),
-                  content: const Text('Yakin ingin logout?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Batal'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Logout'),
-                    ),
-                  ],
-                ),
-              );
+        title: const Text('Katalog Pelatih'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+      ),
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: () async {
+              await context.read<CoachProvider>().fetchCoaches();
+            },
+            child: Consumer<CoachProvider>(
+              builder: (context, provider, child) {
+                if (provider.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-              if (confirmed == true && context.mounted) {
-                final success = await authProvider.logout();
-                if (success && context.mounted) {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                if (provider.error != null) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text(
+                          provider.error!,
+                          style: const TextStyle(color: Colors.red),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => provider.fetchCoaches(),
+                          child: const Text('Coba Lagi'),
+                        ),
+                      ],
+                    ),
                   );
                 }
-              }
-            },
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await provider.fetchCoaches(query: provider.searchQuery, country: provider.selectedCountry, sortBy: provider.sort);
-        },
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Temukan Coach Terbaik Anda', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 6),
-                    Text('Jelajahi daftar pelatih profesional kami.', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary)),
-                    const SizedBox(height: 12),
 
-                    // Search & filters row
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            height: 44,
-                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 6)]),
-                            child: TextField(
-                              onChanged: (v) {
-                                provider.setSearch(v);
-                                _debounce?.cancel();
-                                _debounce = Timer(const Duration(milliseconds: 500), () async {
-                                  await provider.fetchCoaches(query: provider.searchQuery, country: provider.selectedCountry, sortBy: provider.sort);
-                                });
-                              },
-                              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search coaches', border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 12)),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 6)]),
-                          child: DropdownButton<String>(
-                            value: provider.selectedCountry.isEmpty ? null : provider.selectedCountry,
-                            hint: const Text('Country'),
-                            underline: const SizedBox.shrink(),
-                            items: const [
-                              DropdownMenuItem(value: '', child: Text('All')),
-                              DropdownMenuItem(value: 'Indonesia', child: Text('Indonesia')),
-                              DropdownMenuItem(value: 'USA', child: Text('USA')),
-                            ],
-                            onChanged: (v) async {
-                              provider.setCountry(v ?? '');
-                              await provider.fetchCoaches(query: provider.searchQuery, country: provider.selectedCountry, sortBy: provider.sort);
-                            },
-                          ),
-                        ),
-                      ],
+                final filteredCoaches = _filterAndSortCoaches(provider.coaches);
+
+                if (filteredCoaches.isEmpty) {
+                  return const Center(
+                    child: Text('Tidak ada pelatih yang ditemukan'),
+                  );
+                }
+
+                return CustomScrollView(
+                  controller: _scrollController,
+                  slivers: [
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _SearchFilterDelegate(
+                        searchController: _searchController,
+                        onSearchChanged: (value) {
+                          setState(() {
+                            _searchQuery = value;
+                          });
+                        },
+                        selectedCountry: _selectedCountry,
+                        onCountryChanged: (value) {
+                          setState(() {
+                            _selectedCountry = value ?? 'all';
+                          });
+                        },
+                        sortBy: _sortBy,
+                        onSortChanged: (value) {
+                          setState(() {
+                            _sortBy = value ?? 'name';
+                          });
+                        },
+                        availableCountries: provider.coaches
+                            .map((c) => c.citizenship)
+                            .toSet()
+                            .toList(),
+                      ),
                     ),
-                    const SizedBox(height: 12),
-
-                    // Count and sort
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('${provider.coaches.length} coaches', style: Theme.of(context).textTheme.bodySmall),
-                        DropdownButton<String>(
-                          value: provider.sort.isEmpty ? null : provider.sort,
-                          hint: const Text('Sort'),
-                          items: const [
-                            DropdownMenuItem(value: 'average_term_as_coach', child: Text('Experience')),
-                            DropdownMenuItem(value: 'rate', child: Text('Price')),
-                            DropdownMenuItem(value: '-rate', child: Text('Price (desc)')),
-                          ],
-                          onChanged: (v) async {
-                            provider.setSort(v ?? '');
-                            await provider.fetchCoaches(query: provider.searchQuery, country: provider.selectedCountry, sortBy: provider.sort);
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Coaches list
-            provider.isLoading
-                ? const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
-                : provider.coaches.isEmpty
-                    ? const SliverFillRemaining(child: Center(child: Text('Tidak ada coach yang ditemukan.')))
-                    : SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              final coach = provider.coaches[index];
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 6),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => CoachDetailScreen(coachId: coach.id)));
-                                  },
-                                  child: Card(
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    elevation: 2,
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(12.0),
-                                      child: Row(
-                                        children: [
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(8),
-                                            child: coach.foto != null && coach.foto!.isNotEmpty
-                                                ? Image.network(coach.foto!, width: 72, height: 72, fit: BoxFit.cover, errorBuilder: (c, e, st) => Container(width: 72, height: 72, color: AppColors.gray100, child: const Icon(Icons.person, size: 36)))
-                                                : Container(width: 72, height: 72, color: AppColors.gray100, child: const Icon(Icons.person, size: 36)),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                    SliverPadding(
+                      padding: const EdgeInsets.all(16.0),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final coach = filteredCoaches[index];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          CoachDetailScreen(coachId: coach.id),
+                                    ),
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 40,
+                                        backgroundImage: coach.foto != null && coach.foto!.isNotEmpty
+                                            ? NetworkImage(coach.foto!)
+                                            : null,
+                                        child: coach.foto == null || coach.foto!.isEmpty
+                                            ? const Icon(Icons.person, size: 40)
+                                            : null,
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              coach.name,
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              '${coach.citizenship} • ${coach.club}',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: AppColors.textSecondary,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Row(
                                               children: [
-                                                Text(coach.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                                                const SizedBox(height: 4),
-                                                Text('${coach.citizenship} • ${coach.club}', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                                                const SizedBox(height: 8),
-                                                Text(coach.prefferedFormation, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary), overflow: TextOverflow.ellipsis),
+                                                Icon(
+                                                  Icons.workspace_premium,
+                                                  size: 16,
+                                                  color: AppColors.accent,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  coach.license,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 16),
+                                                const Icon(
+                                                  Icons.attach_money,
+                                                  size: 16,
+                                                  color: Colors.green,
+                                                ),
+                                                Text(
+                                                  _formatRupiah(
+                                                      coach.ratePerSession.toInt()),
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: Colors.green,
+                                                  ),
+                                                ),
                                               ],
                                             ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.end,
-                                            children: [
-                                              Text(_formatRupiah(coach.ratePerSession), style: const TextStyle(fontWeight: FontWeight.w800)),
-                                              const SizedBox(height: 8),
-                                              Text('${coach.averageTermAsCoach} yrs', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                                            ],
-                                          )
-                                        ],
+                                          ],
+                                        ),
                                       ),
-                                    ),
+                                      const Icon(
+                                        Icons.arrow_forward_ios,
+                                        size: 16,
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              );
-                            },
-                            childCount: provider.coaches.length,
-                          ),
+                              ),
+                            );
+                          },
+                          childCount: filteredCoaches.length,
                         ),
                       ),
-          ],
-        ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          if (_showScrollToTop)
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: FloatingActionButton(
+                onPressed: _scrollToTop,
+                backgroundColor: AppColors.primary,
+                child: const Icon(Icons.arrow_upward, color: Colors.white),
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  Widget _buildHowCard(IconData icon, String title, String desc) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 6),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFE0E0E0)),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: const BoxDecoration(color: Color(0xFFFFE5DD), shape: BoxShape.circle),
-              child: Icon(icon, color: AppColors.accent, size: 28),
-            ),
-            const SizedBox(height: 8),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF003E85))),
-            const SizedBox(height: 6),
-            Text(desc, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF003E85))),
-          ],
-        ),
-      ),
-    );
+  String _formatRupiah(num amount) {
+    return 'Rp ${amount.toInt().toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    )}';
   }
 }
 
-  String _formatRupiah(double value) {
-    final intVal = value.round();
-    final s = intVal.toString();
-    final buffer = StringBuffer();
-    int len = s.length;
-    for (int i = 0; i < len; i++) {
-      buffer.write(s[i]);
-      final pos = len - i - 1;
-      if (pos % 3 == 0 && i != len - 1) buffer.write('.');
-    }
-    return 'Rp ${buffer.toString()}';
+class _SearchFilterDelegate extends SliverPersistentHeaderDelegate {
+  final TextEditingController searchController;
+  final Function(String) onSearchChanged;
+  final String selectedCountry;
+  final Function(String?) onCountryChanged;
+  final String sortBy;
+  final Function(String?) onSortChanged;
+  final List<String> availableCountries;
+
+  _SearchFilterDelegate({
+    required this.searchController,
+    required this.onSearchChanged,
+    required this.selectedCountry,
+    required this.onCountryChanged,
+    required this.sortBy,
+    required this.onSortChanged,
+    required this.availableCountries,
+  });
+
+  @override
+  double get minExtent => 140;
+
+  @override
+  double get maxExtent => 140;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: AppColors.gray100,
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          TextField(
+            controller: searchController,
+            decoration: InputDecoration(
+              hintText: 'Cari pelatih...',
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            onChanged: onSearchChanged,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: selectedCountry,
+                  decoration: InputDecoration(
+                    labelText: 'Negara',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                  items: [
+                    const DropdownMenuItem(
+                      value: 'all',
+                      child: Text('Semua Negara'),
+                    ),
+                    ...availableCountries.map((country) => DropdownMenuItem(
+                          value: country,
+                          child: Text(country),
+                        )),
+                  ],
+                  onChanged: onCountryChanged,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: sortBy,
+                  decoration: InputDecoration(
+                    labelText: 'Urutkan',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'name',
+                      child: Text('Nama'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'rate',
+                      child: Text('Harga'),
+                    ),
+                  ],
+                  onChanged: onSortChanged,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
+
+  @override
+  bool shouldRebuild(_SearchFilterDelegate oldDelegate) {
+    return selectedCountry != oldDelegate.selectedCountry ||
+        sortBy != oldDelegate.sortBy;
+  }
+}
