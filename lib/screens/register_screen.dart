@@ -21,11 +21,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _password2Controller = TextEditingController();
 
   // Coach fields
+  final _nameController = TextEditingController();
   final _ageController = TextEditingController();
-  final _experienceController = TextEditingController();
-  final _expertiseController = TextEditingController();
-  final _certificationsController = TextEditingController();
-  final _locationController = TextEditingController();
+  final _citizenshipController = TextEditingController();
+  final _clubController = TextEditingController();
+  final _licenseController = TextEditingController();
+  final _formationController = TextEditingController();
+  final _experienceYearsController = TextEditingController();
   final _rateController = TextEditingController();
   final _descriptionController = TextEditingController();
 
@@ -41,11 +43,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _lastNameController.dispose();
     _password1Controller.dispose();
     _password2Controller.dispose();
+    _nameController.dispose();
     _ageController.dispose();
-    _experienceController.dispose();
-    _expertiseController.dispose();
-    _certificationsController.dispose();
-    _locationController.dispose();
+    _citizenshipController.dispose();
+    _clubController.dispose();
+    _licenseController.dispose();
+    _formationController.dispose();
+    _experienceYearsController.dispose();
     _rateController.dispose();
     _descriptionController.dispose();
     super.dispose();
@@ -74,11 +78,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password2: _password2Controller.text,
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
+        name: _nameController.text.trim(),
         age: int.tryParse(_ageController.text) ?? 0,
-        experienceYears: int.tryParse(_experienceController.text) ?? 0,
-        expertise: _expertiseController.text.trim(),
-        certifications: _certificationsController.text.trim(),
-        location: _locationController.text.trim(),
+        citizenship: _citizenshipController.text.trim(),
+        club: _clubController.text.trim(),
+        license: _licenseController.text.trim(),
+        prefferedFormation: _formationController.text.trim(),
+        averageTermAsCoach: double.tryParse(_experienceYearsController.text) ?? 0.0,
         ratePerSession: int.tryParse(_rateController.text) ?? 0,
         description: _descriptionController.text.trim(),
       );
@@ -355,6 +361,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(height: 16),
 
                     TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nama Lengkap *',
+                        hintText: 'Nama lengkap coach',
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Nama harus diisi';
+                        }
+                        return null;
+                      },
+                      enabled: !authProvider.isLoading,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    TextFormField(
                       controller: _ageController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
@@ -378,70 +402,92 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(height: 16),
 
                     TextFormField(
-                      controller: _experienceController,
-                      keyboardType: TextInputType.number,
+                      controller: _citizenshipController,
                       decoration: const InputDecoration(
-                        labelText: 'Pengalaman (tahun) *',
-                        hintText: 'Berapa tahun pengalaman',
+                        labelText: 'Kewarganegaraan *',
+                        hintText: 'Contoh: Indonesia',
+                        prefixIcon: Icon(Icons.flag_outlined),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Kewarganegaraan harus diisi';
+                        }
+                        return null;
+                      },
+                      enabled: !authProvider.isLoading,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    TextFormField(
+                      controller: _clubController,
+                      decoration: const InputDecoration(
+                        labelText: 'Klub *',
+                        hintText: 'Klub saat ini atau terakhir',
+                        prefixIcon: Icon(Icons.sports_soccer_outlined),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Klub harus diisi';
+                        }
+                        return null;
+                      },
+                      enabled: !authProvider.isLoading,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    TextFormField(
+                      controller: _licenseController,
+                      decoration: const InputDecoration(
+                        labelText: 'Lisensi *',
+                        hintText: 'Contoh: UEFA Pro License',
+                        prefixIcon: Icon(Icons.card_membership_outlined),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Lisensi harus diisi';
+                        }
+                        return null;
+                      },
+                      enabled: !authProvider.isLoading,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    TextFormField(
+                      controller: _formationController,
+                      decoration: const InputDecoration(
+                        labelText: 'Formasi Pilihan *',
+                        hintText: 'Contoh: 4-3-3',
+                        prefixIcon: Icon(Icons.grid_3x3_outlined),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Formasi harus diisi';
+                        }
+                        return null;
+                      },
+                      enabled: !authProvider.isLoading,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    TextFormField(
+                      controller: _experienceYearsController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Rata-rata Pengalaman (tahun) *',
+                        hintText: 'Contoh: 5.5',
                         prefixIcon: Icon(Icons.timeline_outlined),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Pengalaman harus diisi';
                         }
-                        return null;
-                      },
-                      enabled: !authProvider.isLoading,
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _expertiseController,
-                      decoration: const InputDecoration(
-                        labelText: 'Keahlian *',
-                        hintText: 'Contoh: Tactical, Fitness',
-                        prefixIcon: Icon(Icons.star_outline),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Keahlian harus diisi';
-                        }
-                        return null;
-                      },
-                      enabled: !authProvider.isLoading,
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _certificationsController,
-                      decoration: const InputDecoration(
-                        labelText: 'Sertifikasi *',
-                        hintText: 'Contoh: UEFA A License',
-                        prefixIcon: Icon(Icons.card_membership_outlined),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Sertifikasi harus diisi';
-                        }
-                        return null;
-                      },
-                      enabled: !authProvider.isLoading,
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _locationController,
-                      decoration: const InputDecoration(
-                        labelText: 'Lokasi *',
-                        hintText: 'Contoh: Jakarta Selatan',
-                        prefixIcon: Icon(Icons.location_on_outlined),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Lokasi harus diisi';
+                        final exp = double.tryParse(value);
+                        if (exp == null || exp < 0) {
+                          return 'Pengalaman harus angka valid';
                         }
                         return null;
                       },
