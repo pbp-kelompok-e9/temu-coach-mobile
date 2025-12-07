@@ -4,6 +4,7 @@ import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'providers/auth_provider.dart';
 import 'providers/coach_provider.dart';
 import 'providers/admin_provider.dart';
+import 'providers/booking_provider.dart';
 import 'screens/login_screen.dart';
 import 'theme/app_theme.dart';
 
@@ -32,6 +33,11 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider<AdminProvider>(
           create: (context) =>
               AdminProvider(Provider.of<CookieRequest>(context, listen: false)),
+        ),
+        ChangeNotifierProvider<BookingProvider>(
+          create: (context) => BookingProvider(
+            Provider.of<CookieRequest>(context, listen: false),
+          ),
         ),
       ],
       child: MaterialApp(
