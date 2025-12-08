@@ -3,7 +3,7 @@ import 'dart:convert';
 import '../models/user_model.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://localhost:8000';
+  static const String baseUrl = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id';
 
   final CookieRequest request;
 

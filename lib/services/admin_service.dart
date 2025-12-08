@@ -1,7 +1,7 @@
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 
 class AdminService {
-  static const String baseUrl = 'http://localhost:8000';
+  static const String baseUrl = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id';
   final CookieRequest request;
 
   AdminService(this.request);
