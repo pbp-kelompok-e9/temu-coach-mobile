@@ -3,7 +3,7 @@ import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../models/booking_model.dart';
 
 class BookingService {
-  static const String baseUrl = 'http://localhost:8000';
+  static const String baseUrl = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id';
   final CookieRequest request;
 
   BookingService(this.request);

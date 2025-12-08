@@ -3,7 +3,7 @@ import '../models/coach_model.dart';
 import '../models/schedule_model.dart';
 
 class CoachService {
-  static const String baseUrl = 'http://localhost:8000';
+  static const String baseUrl = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id';
   final CookieRequest request;
 
   CoachService(this.request);
