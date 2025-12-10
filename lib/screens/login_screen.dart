@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import 'register_screen.dart';
 import 'coach_catalog.dart';
+import 'coach_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -45,13 +46,17 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const AdminScreen()),
         );
+      } else if (user.isCoach) {  
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const CoachDashboardPage()),
+      );
       } else {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const CoachCatalogScreen()),
         );
       }
     } else {
-      // Show error
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.errorMessage ?? 'Login gagal'),

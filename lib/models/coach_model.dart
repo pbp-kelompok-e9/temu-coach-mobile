@@ -3,7 +3,7 @@ class Coach {
   final String name;
   final int age;
   final String citizenship;
-  final String? foto; // url atau path
+  final String? foto; 
   final String club;
   final String license;
   final String prefferedFormation;
