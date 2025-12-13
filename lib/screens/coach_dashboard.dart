@@ -64,7 +64,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       });
       
       if (mounted) {
-        _showPendingDialog(response);
+        _showPendingDialog(Map<String, dynamic>.from(response),);
       }
       return;
     }

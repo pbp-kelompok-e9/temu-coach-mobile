@@ -8,7 +8,7 @@ class CoachAPI {
   // GET coach profile
   Future<Map<String, dynamic>> getCoachProfile() async {
     final response = await request.get("/coach/api/coach-profile/");
-    return response;
+    return Map<String, dynamic>.from(response);
   }
 
   // GET schedule list
@@ -33,7 +33,7 @@ class CoachAPI {
 
   // DELETE schedule
   Future<bool> deleteSchedule(int id) async {
-    final response = await request.delete("/coach/delete_schedule/$id/");
+    final response = await request.post("/coach/delete_schedule/$id/", {});
     return response['status'] == 'deleted';
   }
 
