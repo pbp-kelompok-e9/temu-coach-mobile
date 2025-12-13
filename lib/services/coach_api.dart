@@ -33,7 +33,7 @@ class CoachAPI {
 
   // DELETE schedule
   Future<bool> deleteSchedule(int id) async {
-    final response = await request.delete("/coach/delete_schedule/$id/");
+    final response = await request.post("/coach/delete_schedule/$id/");
     return response['status'] == 'deleted';
   }
 
