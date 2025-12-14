@@ -22,7 +22,7 @@ class ReviewProvider with ChangeNotifier {
 
     try {
       final resp = await request.get('/reviews/check/booking/$bookingId/');
-      hasReviewed = resp['has_reviewed'] == true;
+      hasReviewed = resp['has_review'] == true;
       if (hasReviewed) {
         userReviewId = resp['review']['id'];
         userReview = ReviewModel(
@@ -47,7 +47,7 @@ class ReviewProvider with ChangeNotifier {
 
   Future<bool> createReview(int bookingId, int rate, String? review) async {
     try {
-      final resp = await request.post('reviews/create/booking/$bookingId/', {
+      final resp = await request.post('/reviews/create/booking/$bookingId/', {
         'rate': rate.toString(),
         'review': review ?? '',
       });
@@ -55,9 +55,15 @@ class ReviewProvider with ChangeNotifier {
       if (resp['success'] == true) {
         await checkReviewForBooking(bookingId);
         return true;
+      } else {
+        error = resp['error']?.toString();
+        print('Gagal create review: $error');
+        notifyListeners();
+        return false;
       }
-      return false;
-    } catch (_) {
+    } catch (e) {
+      error = e.toString();
+      notifyListeners();
       return false;
     }
   }
@@ -73,7 +79,8 @@ class ReviewProvider with ChangeNotifier {
         'review': review ?? '',
       });
       return resp['success'] == true;
-    } catch (_) {
+    } catch (e) {
+      debugPrint(e.toString());
       return false;
     }
   }
