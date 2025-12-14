@@ -1,9 +1,12 @@
+import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/coach_provider.dart';
+import '../providers/customer_provider.dart';
 import '../models/coach_model.dart';
 import '../theme/app_theme.dart';
 import 'coach_detail_screen.dart';
+import 'customer_dashboard.dart';
 
 class CoachCatalogScreen extends StatefulWidget {
   const CoachCatalogScreen({super.key});
@@ -58,8 +61,11 @@ class _CoachCatalogScreenState extends State<CoachCatalogScreen> {
 
   List<Coach> _filterAndSortCoaches(List<Coach> coaches) {
     var filtered = coaches.where((coach) {
-      final matchesSearch = coach.name.toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesCountry = _selectedCountry == 'all' || coach.citizenship == _selectedCountry;
+      final matchesSearch = coach.name.toLowerCase().contains(
+        _searchQuery.toLowerCase(),
+      );
+      final matchesCountry =
+          _selectedCountry == 'all' || coach.citizenship == _selectedCountry;
       return matchesSearch && matchesCountry;
     }).toList();
 
@@ -80,6 +86,25 @@ class _CoachCatalogScreenState extends State<CoachCatalogScreen> {
         title: const Text('Katalog Pelatih'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            tooltip: 'Dashboard Pelanggan',
+            icon: const Icon(Icons.dashboard),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChangeNotifierProvider(
+                    create: (context) =>
+                        CustomerDashboardProvider(context.read<CookieRequest>())
+                          ..fetchMyBookings(),
+                    child: const CustomerDashboardPage(),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -98,7 +123,11 @@ class _CoachCatalogScreenState extends State<CoachCatalogScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                        const Icon(
+                          Icons.error_outline,
+                          size: 60,
+                          color: Colors.red,
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           provider.error!,
@@ -156,108 +185,110 @@ class _CoachCatalogScreenState extends State<CoachCatalogScreen> {
                     SliverPadding(
                       padding: const EdgeInsets.all(16.0),
                       sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final coach = filteredCoaches[index];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 16),
-                              elevation: 2,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: InkWell(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          CoachDetailScreen(coachId: coach.id),
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final coach = filteredCoaches[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        CoachDetailScreen(coachId: coach.id),
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 40,
+                                      backgroundImage:
+                                          coach.foto != null &&
+                                              coach.foto!.isNotEmpty
+                                          ? NetworkImage(coach.foto!)
+                                          : null,
+                                      child:
+                                          coach.foto == null ||
+                                              coach.foto!.isEmpty
+                                          ? const Icon(Icons.person, size: 40)
+                                          : null,
                                     ),
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(12),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Row(
-                                    children: [
-                                      CircleAvatar(
-                                        radius: 40,
-                                        backgroundImage: coach.foto != null && coach.foto!.isNotEmpty
-                                            ? NetworkImage(coach.foto!)
-                                            : null,
-                                        child: coach.foto == null || coach.foto!.isEmpty
-                                            ? const Icon(Icons.person, size: 40)
-                                            : null,
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              coach.name,
-                                              style: const TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                              ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            coach.name,
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
                                             ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              '${coach.citizenship} • ${coach.club}',
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: AppColors.textSecondary,
-                                              ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '${coach.citizenship} • ${coach.club}',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: AppColors.textSecondary,
                                             ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.workspace_premium,
-                                                  size: 16,
-                                                  color: AppColors.accent,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.workspace_premium,
+                                                size: 16,
+                                                color: AppColors.accent,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                coach.license,
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w500,
                                                 ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  coach.license,
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
+                                              ),
+                                              const SizedBox(width: 16),
+                                              const Icon(
+                                                Icons.attach_money,
+                                                size: 16,
+                                                color: Colors.green,
+                                              ),
+                                              Text(
+                                                _formatRupiah(
+                                                  coach.ratePerSession.toInt(),
                                                 ),
-                                                const SizedBox(width: 16),
-                                                const Icon(
-                                                  Icons.attach_money,
-                                                  size: 16,
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w500,
                                                   color: Colors.green,
                                                 ),
-                                                Text(
-                                                  _formatRupiah(
-                                                      coach.ratePerSession.toInt()),
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w500,
-                                                    color: Colors.green,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ),
-                                      const Icon(
-                                        Icons.arrow_forward_ios,
-                                        size: 16,
-                                      ),
-                                    ],
-                                  ),
+                                    ),
+                                    const Icon(
+                                      Icons.arrow_forward_ios,
+                                      size: 16,
+                                    ),
+                                  ],
                                 ),
                               ),
-                            );
-                          },
-                          childCount: filteredCoaches.length,
-                        ),
+                            ),
+                          );
+                        }, childCount: filteredCoaches.length),
                       ),
                     ),
                   ],
@@ -281,10 +312,7 @@ class _CoachCatalogScreenState extends State<CoachCatalogScreen> {
   }
 
   String _formatRupiah(num amount) {
-    return 'Rp ${amount.toInt().toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]}.',
-    )}';
+    return 'Rp ${amount.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
   }
 }
 
@@ -315,7 +343,10 @@ class _SearchFilterDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Container(
       color: AppColors.gray100,
       padding: const EdgeInsets.all(16.0),
@@ -357,10 +388,12 @@ class _SearchFilterDelegate extends SliverPersistentHeaderDelegate {
                       value: 'all',
                       child: Text('Semua Negara'),
                     ),
-                    ...availableCountries.map((country) => DropdownMenuItem(
-                          value: country,
-                          child: Text(country),
-                        )),
+                    ...availableCountries.map(
+                      (country) => DropdownMenuItem(
+                        value: country,
+                        child: Text(country),
+                      ),
+                    ),
                   ],
                   onChanged: onCountryChanged,
                 ),
@@ -382,14 +415,8 @@ class _SearchFilterDelegate extends SliverPersistentHeaderDelegate {
                     ),
                   ),
                   items: const [
-                    DropdownMenuItem(
-                      value: 'name',
-                      child: Text('Nama'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'rate',
-                      child: Text('Harga'),
-                    ),
+                    DropdownMenuItem(value: 'name', child: Text('Nama')),
+                    DropdownMenuItem(value: 'rate', child: Text('Harga')),
                   ],
                   onChanged: onSortChanged,
                 ),
