@@ -8,6 +8,7 @@ import '../screens/customer_dashboard.dart';
 import '../screens/coach_dashboard.dart';
 import '../screens/admin_screen.dart';
 import '../screens/login_screen.dart';
+import '../screens/chat_list_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -60,6 +61,21 @@ class AppDrawer extends StatelessWidget {
               );
             },
           ),
+
+          // Chat menu - available for logged in users
+          if (authProvider.isLoggedIn) ...[
+            ListTile(
+              leading: const Icon(Icons.chat),
+              title: const Text('Chat'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ChatListScreen()),
+                );
+              },
+            ),
+          ],
 
           // Customer menu
           if (authProvider.isCustomer && !authProvider.isCoach) ...[

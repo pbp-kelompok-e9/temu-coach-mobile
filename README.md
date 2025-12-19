@@ -49,30 +49,53 @@ Aplikasi ini merupakan versi mobile dari platform Temu Coach berbasis web.
 
 ## Integrasi Data dengan Web (PWS)
 Aplikasi mobile berkomunikasi dengan backend Django (PWS) melalui web service (JSON):
-- Auth:
-  - POST /accounts/api/login/
-  - POST /accounts/api/register/
-  - POST /accounts/api/logout/
-- Coach:
-  - GET /api/coach/
-  - GET /api/coach/<id>/
-  - GET /coach/api/coach-profile/ (untuk coach yang login)
-- Booking:
-  - GET /api/booking/
-  - GET /api/booking/<id>/
-  - POST /api/booking/create/
-  - POST /api/booking/<id>/update/
-  - POST /api/booking/<id>/delete/
-- Schedule:
-  - GET /api/schedule/?coach=<id>
-  - GET /coach/api/schedule/ (untuk coach yang login)
-- Admin:
-  - GET /my_admin/api/reports/
-  - GET /my_admin/api/coach-requests/
-  - POST /my_admin/api/coach/<id>/approve/
-  - POST /my_admin/api/coach/<id>/reject/
-  - POST /my_admin/api/coach/<id>/ban/
-  - POST /my_admin/api/report/<id>/delete/
+
+### Auth
+- POST /accounts/api/login/
+- POST /accounts/api/register/
+- POST /accounts/api/logout/
+- GET /accounts/api/get-current-user/
+
+### Coach
+- GET /api/coach/
+- GET /api/coach/<id>/
+- GET /coach/api/coach-profile/ (untuk coach yang login)
+
+### Booking
+- GET /api/booking/
+- GET /api/booking/<id>/
+- POST /api/booking/create/
+- POST /api/booking/<id>/update/
+- POST /api/booking/<id>/delete/
+
+### Schedule
+- GET /api/schedule/?coach=<id>
+- GET /coach/api/schedule/ (untuk coach yang login)
+- POST /coach/api/schedule/create/
+- PUT /coach/api/schedule/<id>/update/
+- DELETE /coach/api/schedule/<id>/delete/
+
+### Review & Rating
+- GET /api/reviews/?coach=<id>
+- POST /api/reviews/create/
+- PUT /api/reviews/<id>/update/
+- DELETE /api/reviews/<id>/delete/
+
+### Chat
+- GET /chat/api/conversations/ - Daftar percakapan
+- GET /chat/api/contacts/ - Daftar kontak yang bisa dihubungi
+- GET /chat/api/<receiver_id>/ - Ambil pesan dengan user tertentu
+- POST /chat/api/<receiver_id>/ - Kirim pesan
+- PUT /chat/api/message/<message_id>/edit/ - Edit pesan (dalam 5 menit)
+- DELETE /chat/api/message/<message_id>/delete/ - Hapus pesan (dalam 5 menit)
+
+### Admin
+- GET /my_admin/api/reports/
+- GET /my_admin/api/coach-requests/
+- POST /my_admin/api/coach/<id>/approve/
+- POST /my_admin/api/coach/<id>/reject/
+- POST /my_admin/api/coach/<id>/ban/
+- POST /my_admin/api/report/<id>/delete/
 
 ## Design (Figma)
 [Link Figma](https://www.figma.com/design/Kl4YECItsI2E932xoYIP8O/TemuCoach-UI-UX-Design?node-id=0-1&p=f&t=wNcKrVE8xbU9RZCe-0)
