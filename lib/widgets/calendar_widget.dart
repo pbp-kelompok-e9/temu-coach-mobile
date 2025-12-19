@@ -112,9 +112,15 @@ class CalendarWidget extends StatelessWidget {
       cells.add(const SizedBox.shrink());
     }
 
+    final today = DateTime.now();
+    final todayStart = DateTime(today.year, today.month, today.day);
+
     for (int d = 1; d <= daysInMonth; d++) {
       final has = available.contains(d);
       final dayStr = d.toString();
+      final dayDate = DateTime(displayMonth.year, displayMonth.month, d);
+      final isPast = dayDate.isBefore(todayStart);
+      final isSelectable = has && !isPast;
       final isSelected =
           selectedDate != null &&
           DateTime.parse(selectedDate!).day == d &&
@@ -123,7 +129,7 @@ class CalendarWidget extends StatelessWidget {
 
       cells.add(
         GestureDetector(
-          onTap: has
+          onTap: isSelectable
               ? () {
                   final sel = DateTime(
                     displayMonth.year,
@@ -139,7 +145,7 @@ class CalendarWidget extends StatelessWidget {
             decoration: BoxDecoration(
               color: isSelected
                   ? const Color(0xFF003E85)
-                  : (has ? const Color(0xFFFFEDE8) : Colors.transparent),
+                  : (isSelectable ? const Color(0xFFFFEDE8) : Colors.transparent),
               shape: BoxShape.circle,
             ),
             width: 36,
@@ -150,9 +156,12 @@ class CalendarWidget extends StatelessWidget {
                 style: TextStyle(
                   color: isSelected
                       ? Colors.white
-                      : (has
-                            ? const Color(0xFFDE3400)
-                            : AppColors.textSecondary),
+                      : isPast
+                          ? Colors.grey.shade300
+                          : (has
+                              ? const Color(0xFFDE3400)
+                              : AppColors.textSecondary),
+                  decoration: isPast ? TextDecoration.lineThrough : null,
                 ),
               ),
             ),

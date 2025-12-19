@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb;
-
-import 'dart:io' if (dart.library.html) 'dart:html' as html;
+import '../widgets/app_drawer.dart';
 
 class CoachDashboardPage extends StatefulWidget {
   const CoachDashboardPage({Key? key}) : super(key: key);
@@ -15,7 +12,7 @@ class CoachDashboardPage extends StatefulWidget {
 }
 
 class _CoachDashboardPageState extends State<CoachDashboardPage> {
-  static const String baseUrl = 'http://localhost:8000';
+  static const String baseUrl = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id';
   
   Map<String, dynamic>? coachData;
   List<dynamic> jadwalList = [];
@@ -27,14 +24,20 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
     fetchDashboardData();
   }
 
+  void _redirectToLogin() {
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/login');
+    });
+  }
+
   Future<void> fetchDashboardData() async {
   final request = context.read<CookieRequest>();
   
   // Cek login dulu
   if (!request.loggedIn) {
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
-    }
+    _redirectToLogin();
     return;
   }
   
@@ -80,9 +83,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       final message = response['message'] ?? 'Terjadi kesalahan';
       
       if (error == 'unauthorized') {
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/login');
-        }
+        _redirectToLogin();
       } else {
         throw Exception(message);
       }
@@ -109,7 +110,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       // Jika error unauthorized, redirect ke login
       if (e.toString().contains('unauthorized') || 
           e.toString().contains('Login required')) {
-        Navigator.pushReplacementNamed(context, '/login');
+        _redirectToLogin();
       }
     }
   }
@@ -245,6 +246,38 @@ void _showPendingDialog(Map<String, dynamic> response) {
           ),
           ElevatedButton(
             onPressed: () async {
+              // Validasi jam_selesai > jam_mulai
+              final jamMulai = jamMulaiController.text;
+              final jamSelesai = jamSelesaiController.text;
+              
+              if (jamMulai.isNotEmpty && jamSelesai.isNotEmpty) {
+                try {
+                  final mulaiParts = jamMulai.split(':');
+                  final selesaiParts = jamSelesai.split(':');
+                  
+                  final mulaiMinutes = int.parse(mulaiParts[0]) * 60 + int.parse(mulaiParts[1]);
+                  final selesaiMinutes = int.parse(selesaiParts[0]) * 60 + int.parse(selesaiParts[1]);
+                  
+                  if (selesaiMinutes <= mulaiMinutes) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Jam selesai harus lebih besar dari jam mulai'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Format jam tidak valid (gunakan HH:MM)'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+              }
+              
               await addSchedule(
                 tanggalController.text,
                 jamMulaiController.text,
@@ -456,6 +489,7 @@ void _showPendingDialog(Map<String, dynamic> response) {
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('Coach Dashboard'),
         backgroundColor: Colors.blue[900],

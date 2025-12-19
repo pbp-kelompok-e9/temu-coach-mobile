@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/coach_provider.dart';
 import '../providers/booking_provider.dart';
+import '../providers/review_provider.dart';
 import '../models/coach_model.dart';
 import '../models/schedule_model.dart';
 import '../models/booking_model.dart';
+import '../models/review_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/calendar_widget.dart';
 import '../widgets/time_slots_widget.dart';
@@ -22,6 +24,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> {
   Coach? coach;
   List<Schedule> schedules = [];
   Map<String, List<Schedule>> grouped = {};
+  List<ReviewModel> reviews = [];
+  double avgRating = 0;
   bool isLoading = true;
   String? error;
   String? selectedDate;
@@ -48,16 +52,24 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> {
       error = null;
     });
 
-    final provider = Provider.of<CoachProvider>(context, listen: false);
+    final coachProvider = Provider.of<CoachProvider>(context, listen: false);
+    final reviewProvider = Provider.of<ReviewProvider>(context, listen: false);
+    
     try {
-      final c = await provider.fetchCoachDetail(widget.coachId);
-      final s = await provider.fetchSchedules(widget.coachId);
+      final c = await coachProvider.fetchCoachDetail(widget.coachId);
+      final s = await coachProvider.fetchSchedules(widget.coachId);
+      await reviewProvider.fetchReviewsByCoach(widget.coachId);
+      
       setState(() {
         coach = c;
         schedules = s;
         grouped = {};
         for (final sch in s) {
           grouped.putIfAbsent(sch.date, () => []).add(sch);
+        }
+        reviews = reviewProvider.coachReviews;
+        if (reviews.isNotEmpty) {
+          avgRating = reviews.map((r) => r.rate).reduce((a, b) => a + b) / reviews.length;
         }
       });
     } catch (e) {
@@ -154,57 +166,126 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      if (coach!.foto != null && coach!.foto!.isNotEmpty)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(60),
-                          child: Image.network(
-                            coach!.foto!,
-                            width: 100,
-                            height: 100,
-                            fit: BoxFit.cover,
-                            errorBuilder: (c, e, st) =>
-                                const Icon(Icons.person, size: 80),
+                  // Coach Profile Card
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          // Photo and Name
+                          Row(
+                            children: [
+                              if (coach!.foto != null && coach!.foto!.isNotEmpty)
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(50),
+                                  child: Image.network(
+                                    coach!.foto!,
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (c, e, st) =>
+                                        const Icon(Icons.person, size: 80),
+                                  ),
+                                )
+                              else
+                                Container(
+                                  width: 100,
+                                  height: 100,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.gray100,
+                                    borderRadius: BorderRadius.circular(50),
+                                  ),
+                                  child: const Icon(Icons.person, size: 80),
+                                ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      coach!.name,
+                                      style: const TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${coach!.citizenship} • ${coach!.age} tahun',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    // Rating display
+                                    if (reviews.isNotEmpty)
+                                      Row(
+                                        children: [
+                                          ...List.generate(5, (i) => Icon(
+                                            i < avgRating.round() ? Icons.star : Icons.star_border,
+                                            color: Colors.amber,
+                                            size: 18,
+                                          )),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '${avgRating.toStringAsFixed(1)} (${reviews.length})',
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                        )
-                      else
-                        Container(
-                          width: 100,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            color: AppColors.gray100,
-                            borderRadius: BorderRadius.circular(60),
-                          ),
-                          child: const Icon(Icons.person, size: 80),
-                        ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              coach!.name,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
+                          const Divider(height: 24),
+                          // Coach Details
+                          _buildDetailRow(Icons.shield, 'Klub', coach!.club),
+                          _buildDetailRow(Icons.sports_soccer, 'Formasi', coach!.prefferedFormation.isNotEmpty ? coach!.prefferedFormation : '-'),
+                          _buildDetailRow(Icons.badge, 'Lisensi', coach!.license),
+                          _buildDetailRow(Icons.access_time, 'Pengalaman', '${coach!.averageTermAsCoach.toStringAsFixed(1)} Tahun'),
+                          _buildDetailRow(Icons.attach_money, 'Tarif/Sesi', 'Rp ${_formatRupiah(coach!.ratePerSession.toInt())}'),
+                          const Divider(height: 24),
+                          // Description
+                          const Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Deskripsi',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '${coach!.citizenship} • ${coach!.club}',
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            coach!.description.isNotEmpty ? coach!.description : 'Tidak ada deskripsi.',
+                            style: TextStyle(color: Colors.grey[700]),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Booking Section Title
+                  const Text(
+                    'Pilih Jadwal Booking',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF003E85),
+                    ),
                   ),
                   const SizedBox(height: 12),
-                  Text(coach!.description),
-                  const SizedBox(height: 18),
 
                   // Calendar Widget
                   CalendarWidget(
@@ -242,9 +323,176 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> {
                       onBookPressed: _handleBooking,
                       isLoading: isBooking,
                     ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Reviews Section
+                  _buildReviewsSection(),
                 ],
               ),
             ),
     );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: const Color(0xFFDE3400)),
+          const SizedBox(width: 12),
+          Text('$label: ', style: TextStyle(color: Colors.grey[600])),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatRupiah(int amount) {
+    String result = '';
+    String amountStr = amount.toString();
+    int count = 0;
+    for (int i = amountStr.length - 1; i >= 0; i--) {
+      count++;
+      result = amountStr[i] + result;
+      if (count % 3 == 0 && i != 0) {
+        result = '.$result';
+      }
+    }
+    return result;
+  }
+
+  Widget _buildReviewsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Reviews (${reviews.length})',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF003E85),
+              ),
+            ),
+            if (reviews.isNotEmpty)
+              Row(
+                children: [
+                  Text(
+                    avgRating.toStringAsFixed(1),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.star, color: Colors.amber, size: 20),
+                ],
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (reviews.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Center(
+              child: Text(
+                'Belum ada review untuk coach ini.',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          )
+        else
+          SizedBox(
+            height: 160,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: reviews.length,
+              itemBuilder: (context, index) {
+                final review = reviews[index];
+                return Container(
+                  width: 280,
+                  margin: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[200]!),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Stars
+                      Row(
+                        children: List.generate(5, (i) => Icon(
+                          i < review.rate ? Icons.star : Icons.star_border,
+                          color: Colors.amber,
+                          size: 18,
+                        )),
+                      ),
+                      const SizedBox(height: 8),
+                      // Username
+                      Text(
+                        review.user,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      // Review text
+                      Expanded(
+                        child: Text(
+                          review.review ?? '-',
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 13,
+                          ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      // Date
+                      Text(
+                        _formatDate(review.createdAt),
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 }

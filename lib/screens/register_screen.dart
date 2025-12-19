@@ -21,7 +21,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _password2Controller = TextEditingController();
 
   // Coach fields
-  final _nameController = TextEditingController();
   final _ageController = TextEditingController();
   final _citizenshipController = TextEditingController();
   final _clubController = TextEditingController();
@@ -43,7 +42,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _lastNameController.dispose();
     _password1Controller.dispose();
     _password2Controller.dispose();
-    _nameController.dispose();
     _ageController.dispose();
     _citizenshipController.dispose();
     _clubController.dispose();
@@ -78,7 +76,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password2: _password2Controller.text,
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
-        name: _nameController.text.trim(),
         age: int.tryParse(_ageController.text) ?? 0,
         citizenship: _citizenshipController.text.trim(),
         club: _clubController.text.trim(),
@@ -358,24 +355,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       'Informasi Coach',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
-                    const SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nama Lengkap *',
-                        hintText: 'Nama lengkap coach',
-                        prefixIcon: Icon(Icons.person_outline),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Nama harus diisi';
-                        }
-                        return null;
-                      },
-                      enabled: !authProvider.isLoading,
-                    ),
-
                     const SizedBox(height: 16),
 
                     TextFormField(
