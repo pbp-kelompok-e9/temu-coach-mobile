@@ -1,10 +1,11 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../models/chat_message.dart';
 
 class ChatService {
-  // static const String baseUrl = 'http://127.0.0.1:8000';
   static const String baseUrl = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id';
+  // static const String baseUrl = 'http://127.0.0.1:8000';
 
   final CookieRequest request;
 
@@ -97,14 +98,24 @@ class ChatService {
   /// Edit a message
   Future<bool> editMessage(int messageId, String newContent) async {
     try {
-      final response = await request.request(
-        '$baseUrl/chat/api/message/$messageId/edit/',
-        'PUT',
+      // Get cookies from CookieRequest
+      final cookies = request.cookies;
+      final cookieHeader = cookies.entries.map((e) => '${e.key}=${e.value}').join('; ');
+      
+      final response = await http.put(
+        Uri.parse('$baseUrl/chat/api/message/$messageId/edit/'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': cookieHeader,
+        },
         body: jsonEncode({'content': newContent}),
-        headers: {'Content-Type': 'application/json'},
       );
       
-      return response['success'] == true;
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['success'] == true;
+      }
+      return false;
     } catch (e) {
       print('Error editing message: $e');
       return false;
@@ -114,13 +125,23 @@ class ChatService {
   /// Delete a message
   Future<bool> deleteMessage(int messageId) async {
     try {
-      final response = await request.request(
-        '$baseUrl/chat/api/message/$messageId/delete/',
-        'DELETE',
-        headers: {'Content-Type': 'application/json'},
+      // Get cookies from CookieRequest
+      final cookies = request.cookies;
+      final cookieHeader = cookies.entries.map((e) => '${e.key}=${e.value}').join('; ');
+      
+      final response = await http.delete(
+        Uri.parse('$baseUrl/chat/api/message/$messageId/delete/'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': cookieHeader,
+        },
       );
       
-      return response['success'] == true;
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['success'] == true;
+      }
+      return false;
     } catch (e) {
       print('Error deleting message: $e');
       return false;

@@ -48,22 +48,43 @@ class AppDrawer extends StatelessWidget {
             ),
           ),
 
-          // Menu items for everyone
-          ListTile(
-            leading: const Icon(Icons.sports),
-            title: const Text('Katalog Coach'),
-            onTap: () {
-              Navigator.pop(context); // Close drawer
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const CoachCatalogScreen()),
-                (route) => false,
-              );
-            },
-          ),
+          // Customer menu
+          if (authProvider.isCustomer && !authProvider.isCoach && !authProvider.isAdmin) ...[
+            ListTile(
+              leading: const Icon(Icons.calendar_today),
+              title: const Text('Dashboard Customer'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (ctx) => ChangeNotifierProvider(
+                      create: (_) => CustomerDashboardProvider(
+                        ctx.read<CookieRequest>(),
+                      )..fetchMyBookings(),
+                      child: const CustomerDashboardPage(),
+                    ),
+                  ),
+                );
+              },
+            ),
 
-          // Chat menu - available for logged in users
-          if (authProvider.isLoggedIn) ...[
+            ListTile(
+              leading: const Icon(Icons.sports),
+              title: const Text('Katalog Coach'),
+              onTap: () {
+                Navigator.pop(context); // Close drawer
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CoachCatalogScreen()),
+                  (route) => false,
+                );
+              },
+            ),
+          ],
+
+          // Chat menu - customer & coach only (admin blocked)
+          if (authProvider.isLoggedIn && !authProvider.isAdmin) ...[
             ListTile(
               leading: const Icon(Icons.chat),
               title: const Text('Chat'),
@@ -72,28 +93,6 @@ class AppDrawer extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const ChatListScreen()),
-                );
-              },
-            ),
-          ],
-
-          // Customer menu
-          if (authProvider.isCustomer && !authProvider.isCoach) ...[
-            ListTile(
-              leading: const Icon(Icons.calendar_today),
-              title: const Text('Booking Saya'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (ctx) => ChangeNotifierProvider(
-                      create: (_) => CustomerDashboardProvider(
-                        context.read<CookieRequest>(),
-                      )..fetchMyBookings(),
-                      child: const CustomerDashboardPage(),
-                    ),
-                  ),
                 );
               },
             ),

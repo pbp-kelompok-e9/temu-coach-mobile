@@ -18,9 +18,9 @@ class AuthProvider with ChangeNotifier {
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  bool get isLoggedIn => _authService.isLoggedIn && _user != null;
+  bool get isLoggedIn => _request.loggedIn && _user != null;
   bool get isCoach => _user?.isCoach ?? false;
-  bool get isCustomer => _user?.isCustomer ?? true;
+  bool get isCustomer => _user?.isCustomer ?? false;
   bool get isAdmin => _user?.isAdmin ?? false;
 
   void _setLoading(bool value) {

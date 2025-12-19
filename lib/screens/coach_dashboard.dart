@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb;
-
-import 'dart:io' if (dart.library.html) 'dart:html' as html;
 import '../widgets/app_drawer.dart';
 
 class CoachDashboardPage extends StatefulWidget {
@@ -16,7 +12,7 @@ class CoachDashboardPage extends StatefulWidget {
 }
 
 class _CoachDashboardPageState extends State<CoachDashboardPage> {
-  static const String baseUrl = 'http://localhost:8000';
+  static const String baseUrl = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id';
   
   Map<String, dynamic>? coachData;
   List<dynamic> jadwalList = [];
@@ -28,14 +24,20 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
     fetchDashboardData();
   }
 
+  void _redirectToLogin() {
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/login');
+    });
+  }
+
   Future<void> fetchDashboardData() async {
   final request = context.read<CookieRequest>();
   
   // Cek login dulu
   if (!request.loggedIn) {
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
-    }
+    _redirectToLogin();
     return;
   }
   
@@ -81,9 +83,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       final message = response['message'] ?? 'Terjadi kesalahan';
       
       if (error == 'unauthorized') {
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/login');
-        }
+        _redirectToLogin();
       } else {
         throw Exception(message);
       }
@@ -110,7 +110,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       // Jika error unauthorized, redirect ke login
       if (e.toString().contains('unauthorized') || 
           e.toString().contains('Login required')) {
-        Navigator.pushReplacementNamed(context, '/login');
+        _redirectToLogin();
       }
     }
   }

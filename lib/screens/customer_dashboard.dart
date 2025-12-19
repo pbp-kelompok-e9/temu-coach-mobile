@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/customer_provider.dart';
 import '../models/booking_model.dart';
+import '../widgets/app_drawer.dart';
 
 class CustomerDashboardPage extends StatelessWidget {
   const CustomerDashboardPage({super.key});
@@ -13,6 +14,7 @@ class CustomerDashboardPage extends StatelessWidget {
         title: const Text('Janji Temu Anda'),
         backgroundColor: Colors.blue[900],
       ),
+      drawer: const AppDrawer(),
       body: Consumer<CustomerDashboardProvider>(
         builder: (context, provider, _) {
           if (provider.loading) {

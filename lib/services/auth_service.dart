@@ -4,6 +4,7 @@ import '../models/user_model.dart';
 
 class AuthService {
   static const String baseUrl = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id';
+  // static const String baseUrl = 'http://127.0.0.1:8000';
 
   final CookieRequest request;
 
@@ -14,12 +15,12 @@ class AuthService {
     required String password,
   }) async {
     try {
-      final response = await request.post(
+      final response = await request.login(
         '$baseUrl/accounts/api/login/',
-        jsonEncode({
+        {
           'username': username,
           'password': password,
-        }),
+        },
       );
 
       if (response['status'] == true) {
@@ -114,6 +115,9 @@ class AuthService {
           'last_name': lastName ?? '',
           'user_type': 'coach',
           'coach_data': {
+            'name': '${firstName ?? ''} ${lastName ?? ''}'.trim().isNotEmpty 
+                    ? '${firstName ?? ''} ${lastName ?? ''}'.trim() 
+                    : username,
             'age': age,
             'citizenship': citizenship,
             'club': club,

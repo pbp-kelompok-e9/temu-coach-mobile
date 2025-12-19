@@ -52,6 +52,9 @@ class MyApp extends StatelessWidget {
         theme: AppTheme.lightTheme,
         debugShowCheckedModeBanner: false,
         home: const LoginScreen(),
+        routes: {
+          '/login': (context) => const LoginScreen(),
+        },
         onGenerateRoute: (settings) {
           if (settings.name == '/review') {
             final bookingId = settings.arguments as int;
@@ -60,6 +63,7 @@ class MyApp extends StatelessWidget {
               builder: (context) => ReviewScreen(bookingId: bookingId),
             );
           }
+          return null;
         },
       ),
     );
