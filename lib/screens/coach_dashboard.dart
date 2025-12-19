@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'dart:io' if (dart.library.html) 'dart:html' as html;
+import '../widgets/app_drawer.dart';
 
 class CoachDashboardPage extends StatefulWidget {
   const CoachDashboardPage({Key? key}) : super(key: key);
@@ -245,6 +246,38 @@ void _showPendingDialog(Map<String, dynamic> response) {
           ),
           ElevatedButton(
             onPressed: () async {
+              // Validasi jam_selesai > jam_mulai
+              final jamMulai = jamMulaiController.text;
+              final jamSelesai = jamSelesaiController.text;
+              
+              if (jamMulai.isNotEmpty && jamSelesai.isNotEmpty) {
+                try {
+                  final mulaiParts = jamMulai.split(':');
+                  final selesaiParts = jamSelesai.split(':');
+                  
+                  final mulaiMinutes = int.parse(mulaiParts[0]) * 60 + int.parse(mulaiParts[1]);
+                  final selesaiMinutes = int.parse(selesaiParts[0]) * 60 + int.parse(selesaiParts[1]);
+                  
+                  if (selesaiMinutes <= mulaiMinutes) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Jam selesai harus lebih besar dari jam mulai'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Format jam tidak valid (gunakan HH:MM)'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+              }
+              
               await addSchedule(
                 tanggalController.text,
                 jamMulaiController.text,
@@ -456,6 +489,7 @@ void _showPendingDialog(Map<String, dynamic> response) {
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('Coach Dashboard'),
         backgroundColor: Colors.blue[900],

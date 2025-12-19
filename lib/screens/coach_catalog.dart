@@ -5,6 +5,7 @@ import '../providers/coach_provider.dart';
 import '../providers/customer_provider.dart';
 import '../models/coach_model.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_drawer.dart';
 import 'coach_detail_screen.dart';
 import 'customer_dashboard.dart';
 
@@ -82,6 +83,7 @@ class _CoachCatalogScreenState extends State<CoachCatalogScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.gray100,
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('Katalog Pelatih'),
         backgroundColor: AppColors.primary,
@@ -146,12 +148,6 @@ class _CoachCatalogScreenState extends State<CoachCatalogScreen> {
 
                 final filteredCoaches = _filterAndSortCoaches(provider.coaches);
 
-                if (filteredCoaches.isEmpty) {
-                  return const Center(
-                    child: Text('Tidak ada pelatih yang ditemukan'),
-                  );
-                }
-
                 return CustomScrollView(
                   controller: _scrollController,
                   slivers: [
@@ -182,6 +178,31 @@ class _CoachCatalogScreenState extends State<CoachCatalogScreen> {
                             .toList(),
                       ),
                     ),
+                    if (filteredCoaches.isEmpty)
+                      const SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.search_off,
+                                size: 64,
+                                color: Colors.grey,
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                'Tidak ada pelatih yang ditemukan',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
                     SliverPadding(
                       padding: const EdgeInsets.all(16.0),
                       sliver: SliverList(
