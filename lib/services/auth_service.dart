@@ -93,7 +93,6 @@ class AuthService {
     required String password2,
     String? firstName,
     String? lastName,
-    required String name,
     required int age,
     required String citizenship,
     required String club,
@@ -115,7 +114,6 @@ class AuthService {
           'last_name': lastName ?? '',
           'user_type': 'coach',
           'coach_data': {
-            'name': name,
             'age': age,
             'citizenship': citizenship,
             'club': club,
