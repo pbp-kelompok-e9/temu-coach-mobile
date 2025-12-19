@@ -5,7 +5,9 @@ import 'providers/auth_provider.dart';
 import 'providers/coach_provider.dart';
 import 'providers/admin_provider.dart';
 import 'providers/booking_provider.dart';
+import 'providers/review_provider.dart';
 import 'screens/login_screen.dart';
+import 'screens/review_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -39,12 +41,26 @@ class MyApp extends StatelessWidget {
             Provider.of<CookieRequest>(context, listen: false),
           ),
         ),
+        ChangeNotifierProvider<ReviewProvider>(
+          create: (context) => ReviewProvider(
+            Provider.of<CookieRequest>(context, listen: false),
+          ),
+        ),
       ],
       child: MaterialApp(
         title: 'TemuCoach',
         theme: AppTheme.lightTheme,
         debugShowCheckedModeBanner: false,
         home: const LoginScreen(),
+        onGenerateRoute: (settings) {
+          if (settings.name == '/review') {
+            final bookingId = settings.arguments as int;
+
+            return MaterialPageRoute(
+              builder: (context) => ReviewScreen(bookingId: bookingId),
+            );
+          }
+        },
       ),
     );
   }
