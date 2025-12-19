@@ -50,39 +50,29 @@ Aplikasi ini merupakan versi mobile dari platform Temu Coach berbasis web.
 ## Integrasi Data dengan Web (PWS)
 Aplikasi mobile berkomunikasi dengan backend Django (PWS) melalui web service (JSON):
 - Auth:
-  - POST /api/auth/login/
-  - POST /api/auth/register/
-  - POST /api/auth/logout/
+  - POST /accounts/api/login/
+  - POST /accounts/api/register/
+  - POST /accounts/api/logout/
 - Coach:
   - GET /api/coach/
   - GET /api/coach/<id>/
+  - GET /coach/api/coach-profile/ (untuk coach yang login)
 - Booking:
-  - GET /api/bookings/ (semua / bisa pakai ?mine=1)
-  - POST /api/bookings/ (create)
-  - PUT /api/bookings/<id>/ (edit note)
-  - DELETE /api/bookings/<id>/ (cancel)
-- Review:
-  - GET /api/reviews/?coach=<id>
-  - POST /api/reviews/
-  - PUT /api/reviews/<id>/
-  - DELETE /api/reviews/<id>/
+  - GET /api/booking/
+  - GET /api/booking/<id>/
+  - POST /api/booking/create/
+  - POST /api/booking/<id>/update/
+  - POST /api/booking/<id>/delete/
 - Schedule:
   - GET /api/schedule/?coach=<id>
-  - POST /api/schedule/
-  - PUT /api/schedule/<id>/
-  - DELETE /api/schedule/<id>/
-- Chat:
-  - GET /api/chat/contacts/
-  - GET /api/chat/rooms/
-  - GET /api/chat/messages/?room=<id>
-  - POST /api/chat/send/   (room_id, message)
-  - PUT /api/chat/messages/<id>/   (edit pesan)
-  - DELETE /api/chat/messages/<id>/ (hapus pesan)
+  - GET /coach/api/schedule/ (untuk coach yang login)
 - Admin:
-  - PUT /api/admin/coach/<id>/flag/ (ubah flag/status)
-  - POST /api/admin/ban-coach/<id>/
-  - POST /api/admin/verify-coach/<id>/
-  - DELETE /api/admin/reports/<id>/ (hapus report)
+  - GET /my_admin/api/reports/
+  - GET /my_admin/api/coach-requests/
+  - POST /my_admin/api/coach/<id>/approve/
+  - POST /my_admin/api/coach/<id>/reject/
+  - POST /my_admin/api/coach/<id>/ban/
+  - POST /my_admin/api/report/<id>/delete/
 
 ## Design (Figma)
 [Link Figma](https://www.figma.com/design/Kl4YECItsI2E932xoYIP8O/TemuCoach-UI-UX-Design?node-id=0-1&p=f&t=wNcKrVE8xbU9RZCe-0)
