@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/review_provider.dart';
+import '../providers/review_provider.dart'; // Sesuaikan path import provider kamu
 
 class ReviewScreen extends StatefulWidget {
   final int bookingId;
@@ -14,21 +14,33 @@ class ReviewScreen extends StatefulWidget {
 class _ReviewScreenState extends State<ReviewScreen> {
   int _rating = 0;
   final TextEditingController _reviewController = TextEditingController();
+  bool _isInitialLoading = true;
 
   @override
   void initState() {
     super.initState();
+    // Jalanin pengecekan setelah frame pertama dirender
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadReviewData();
+    });
+  }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final provider = context.read<ReviewProvider>();
-      await provider.checkReviewForBooking(widget.bookingId);
+  Future<void> _loadReviewData() async {
+    final provider = context.read<ReviewProvider>();
+    
+    // 1. Cek ke backend
+    await provider.checkReviewForBooking(widget.bookingId);
 
-      if (provider.hasReviewed && provider.userReview != null) {
-        setState(() {
-          _rating = provider.userReview!.rate;
-          _reviewController.text = provider.userReview!.review ?? '';
-        });
-      }
+    // 2. Kalau data ditemukan (User mau edit), isi form dengan data lama
+    if (provider.hasReviewed && provider.userReview != null) {
+      setState(() {
+        _rating = provider.userReview!.rate;
+        _reviewController.text = provider.userReview!.review ?? '';
+      });
+    }
+
+    setState(() {
+      _isInitialLoading = false;
     });
   }
 
@@ -38,42 +50,32 @@ class _ReviewScreenState extends State<ReviewScreen> {
     super.dispose();
   }
 
-  Widget _buildStar(int index) {
-    return IconButton(
-      icon: Icon(
-        index <= _rating ? Icons.star : Icons.star_border,
-        color: Colors.amber,
-        size: 32,
-      ),
-      onPressed: () {
-        setState(() {
-          _rating = index;
-        });
-      },
-    );
-  }
-
+  // --- Logic Submit (Create / Update) ---
   Future<void> _submitReview() async {
     final provider = context.read<ReviewProvider>();
 
+    // Validasi sederhana
     if (_rating == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Rating tidak boleh kosong')),
+        const SnackBar(
+          content: Text('Mohon beri rating bintang ⭐'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
 
-    bool success = await provider.createReview(
-      widget.bookingId,
-      _rating,
-      _reviewController.text,
-    );
-    if (!success) {
-      print('Error saat create review: ${provider.error}');
-    }
+    bool success;
+    
+    // Cek apakah mode UPDATE atau CREATE
     if (provider.hasReviewed) {
-      success = await provider.updateReview(_rating, _reviewController.text);
+      // Mode UPDATE
+      success = await provider.updateReview(
+        _rating,
+        _reviewController.text,
+      );
     } else {
+      // Mode CREATE
       success = await provider.createReview(
         widget.bookingId,
         _rating,
@@ -81,47 +83,52 @@ class _ReviewScreenState extends State<ReviewScreen> {
       );
     }
 
-    if (success && mounted) {
+    if (!mounted) return;
+
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            provider.hasReviewed
-                ? 'Review berhasil diupdate!'
-                : 'Review berhasil ditambahkan!',
-          ),
+          content: Text(provider.hasReviewed 
+            ? 'Review berhasil diperbarui!' 
+            : 'Review berhasil dikirim!'),
+          backgroundColor: Colors.green,
         ),
       );
-      Navigator.pop(context, true);
+      Navigator.pop(context, true); // Balik dan kasih sinyal success
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Gagal menyimpan review')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(provider.error ?? 'Gagal menyimpan review'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
+  // --- Logic Delete ---
   Future<void> _deleteReview() async {
-    final provider = context.read<ReviewProvider>();
-
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Hapus Review'),
-        content: const Text('Apakah Anda yakin ingin menghapus review ini?'),
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Review?'),
+        content: const Text('Apakah Anda yakin ingin menghapus ulasan ini?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Batal'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Hapus', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
 
-    if (confirm == true) {
+    if (confirm == true && mounted) {
+      final provider = context.read<ReviewProvider>();
       final success = await provider.deleteReview();
+
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Review berhasil dihapus')),
@@ -131,46 +138,107 @@ class _ReviewScreenState extends State<ReviewScreen> {
     }
   }
 
+  // --- Widget Bintang ---
+  Widget _buildStar(int index) {
+    return IconButton(
+      icon: Icon(
+        index <= _rating ? Icons.star : Icons.star_border,
+        color: Colors.amber,
+        size: 40,
+      ),
+      onPressed: () {
+        setState(() {
+          _rating = index;
+        });
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ReviewProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Review Sesi')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Rating', style: TextStyle(fontSize: 16)),
-            Row(children: List.generate(5, (i) => _buildStar(i + 1))),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _reviewController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Review (opsional)',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _submitReview,
-              child: Text(
-                provider.hasReviewed ? 'Update Review' : 'Kirim Review',
-              ),
-            ),
-            if (provider.hasReviewed)
-              TextButton(
-                onPressed: _deleteReview,
-                child: const Text(
-                  'Hapus Review',
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
-          ],
-        ),
+      appBar: AppBar(
+        title: Text(provider.hasReviewed ? 'Edit Review' : 'Beri Review'),
+        backgroundColor: Colors.blue[900],
+        foregroundColor: Colors.white,
       ),
+      body: _isInitialLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Bagaimana pengalaman sesi Anda?',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Row Bintang
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (i) => _buildStar(i + 1)),
+                  ),
+                  
+                  const SizedBox(height: 24),
+
+                  // Input Text
+                  TextField(
+                    controller: _reviewController,
+                    maxLines: 5,
+                    decoration: InputDecoration(
+                      labelText: 'Tulis ulasan Anda (opsional)',
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      hintText: 'Ceritakan pengalaman Anda dengan coach ini...',
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Tombol Submit (Full Width)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: provider.loading ? null : _submitReview,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue[900],
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: provider.loading
+                          ? const SizedBox(
+                              height: 24, 
+                              width: 24, 
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                            )
+                          : Text(
+                              provider.hasReviewed ? 'Update Review' : 'Kirim Review',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                    ),
+                  ),
+
+                  // Tombol Delete (Hanya muncul kalau sudah pernah review)
+                  if (provider.hasReviewed) ...[
+                    const SizedBox(height: 16),
+                    TextButton.icon(
+                      onPressed: provider.loading ? null : _deleteReview,
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      label: const Text('Hapus Review Ini', style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ],
+              ),
+            ),
     );
   }
 }

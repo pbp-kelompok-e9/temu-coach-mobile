@@ -3,6 +3,7 @@ import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../widgets/app_drawer.dart';
+import '../providers/review_provider.dart';
 
 class CoachDashboardPage extends StatefulWidget {
   const CoachDashboardPage({Key? key}) : super(key: key);
@@ -13,18 +14,25 @@ class CoachDashboardPage extends StatefulWidget {
 
 class _CoachDashboardPageState extends State<CoachDashboardPage> {
   static const String baseUrl = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id';
-  
+
   Map<String, dynamic>? coachData;
   List<dynamic> jadwalList = [];
   bool isLoading = true;
-  
+  int _selectedStarFilter = 0;
 
-  String selectedFilter = 'Semua'; 
+  String selectedFilter = 'Semua';
 
   @override
   void initState() {
     super.initState();
     fetchDashboardData();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final reviewProvider = context.read<ReviewProvider>();
+      if (coachData?['id'] != null) {
+        reviewProvider.fetchReviewsByCoach(coachData!['id']);
+      }
+    });
   }
 
   void _redirectToLogin() {
@@ -41,13 +49,13 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       final year = int.parse(dateParts[0]);
       final month = int.parse(dateParts[1]);
       final day = int.parse(dateParts[2]);
-      
+
       final timeParts = jamSelesai.split(':');
       final hour = int.parse(timeParts[0]);
       final minute = int.parse(timeParts[1]);
-      
+
       final scheduleDateTime = DateTime(year, month, day, hour, minute);
-      
+
       return scheduleDateTime.isBefore(DateTime.now());
     } catch (e) {
       return false;
@@ -56,46 +64,48 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
 
   Future<void> fetchDashboardData() async {
     final request = context.read<CookieRequest>();
-    
+
     if (!request.loggedIn) {
       _redirectToLogin();
       return;
     }
-    
+
     try {
       final response = await request.get("$baseUrl/coach/api/coach-profile/");
-      
+
       if (response == null) {
         throw Exception('Response is null');
       }
-      
+
       if (response is! Map) {
         throw Exception('Response is not a Map: ${response.runtimeType}');
       }
-      
+
       final status = response['status'];
-      
+
       if (status == 'pending') {
         setState(() {
           isLoading = false;
         });
-        
+
         if (mounted) {
           _showPendingDialog(Map<String, dynamic>.from(response));
         }
         return;
       }
-      
+
       if (status == 'success') {
         setState(() {
           coachData = response['coach'];
           jadwalList = response['jadwal_list'] ?? [];
           isLoading = false;
         });
+        final reviewProvider = context.read<ReviewProvider>();
+        await reviewProvider.fetchReviewsByCoach(coachData!['id']);
       } else if (status == 'error') {
         final error = response['error'];
         final message = response['message'] ?? 'Terjadi kesalahan';
-        
+
         if (error == 'unauthorized') {
           _redirectToLogin();
         } else {
@@ -104,12 +114,11 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       } else {
         throw Exception('Unknown response status: $status');
       }
-      
     } catch (e) {
       setState(() {
         isLoading = false;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -118,8 +127,8 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
             duration: const Duration(seconds: 5),
           ),
         );
-        
-        if (e.toString().contains('unauthorized') || 
+
+        if (e.toString().contains('unauthorized') ||
             e.toString().contains('Login required')) {
           _redirectToLogin();
         }
@@ -149,9 +158,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Silakan hubungi admin untuk informasi lebih lanjut.',
-              ),
+              const Text('Silakan hubungi admin untuk informasi lebih lanjut.'),
               if (response['coach_data'] != null) ...[
                 const SizedBox(height: 16),
                 const Divider(),
@@ -161,11 +168,26 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                 ),
                 const SizedBox(height: 8),
-                Text('Nama: ${response['coach_data']['name']}', style: const TextStyle(fontSize: 12)),
-                Text('Umur: ${response['coach_data']['age']} tahun', style: const TextStyle(fontSize: 12)),
-                Text('Kewarganegaraan: ${response['coach_data']['citizenship']}', style: const TextStyle(fontSize: 12)),
-                Text('Klub: ${response['coach_data']['club']}', style: const TextStyle(fontSize: 12)),
-                Text('Lisensi: ${response['coach_data']['license']}', style: const TextStyle(fontSize: 12)),
+                Text(
+                  'Nama: ${response['coach_data']['name']}',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                Text(
+                  'Umur: ${response['coach_data']['age']} tahun',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                Text(
+                  'Kewarganegaraan: ${response['coach_data']['citizenship']}',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                Text(
+                  'Klub: ${response['coach_data']['club']}',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                Text(
+                  'Lisensi: ${response['coach_data']['license']}',
+                  style: const TextStyle(fontSize: 12),
+                ),
               ],
             ],
           ),
@@ -173,8 +195,8 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context); 
-              Navigator.pop(context); 
+              Navigator.pop(context);
+              Navigator.pop(context);
             },
             child: const Text('OK'),
           ),
@@ -195,7 +217,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
         setState(() {
           jadwalList.removeWhere((jadwal) => jadwal['id'] == id);
         });
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Jadwal berhasil dibatalkan')),
@@ -204,9 +226,9 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
       }
     }
   }
@@ -226,7 +248,10 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Tanggal', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'Tanggal',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: () async {
@@ -243,7 +268,10 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                     }
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 16,
+                    ),
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey),
                       borderRadius: BorderRadius.circular(4),
@@ -256,7 +284,9 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                               ? '${selectedDate!.year}-${selectedDate!.month.toString().padLeft(2, '0')}-${selectedDate!.day.toString().padLeft(2, '0')}'
                               : 'Pilih tanggal',
                           style: TextStyle(
-                            color: selectedDate != null ? Colors.black : Colors.grey[600],
+                            color: selectedDate != null
+                                ? Colors.black
+                                : Colors.grey[600],
                           ),
                         ),
                         const Icon(Icons.calendar_today, size: 20),
@@ -265,8 +295,11 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                
-                const Text('Jam Mulai', style: TextStyle(fontWeight: FontWeight.bold)),
+
+                const Text(
+                  'Jam Mulai',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: () async {
@@ -281,7 +314,10 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                     }
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 16,
+                    ),
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey),
                       borderRadius: BorderRadius.circular(4),
@@ -294,7 +330,9 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                               ? '${selectedStartTime!.hour.toString().padLeft(2, '0')}:${selectedStartTime!.minute.toString().padLeft(2, '0')}'
                               : 'Pilih jam mulai',
                           style: TextStyle(
-                            color: selectedStartTime != null ? Colors.black : Colors.grey[600],
+                            color: selectedStartTime != null
+                                ? Colors.black
+                                : Colors.grey[600],
                           ),
                         ),
                         const Icon(Icons.access_time, size: 20),
@@ -303,8 +341,11 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                
-                const Text('Jam Selesai', style: TextStyle(fontWeight: FontWeight.bold)),
+
+                const Text(
+                  'Jam Selesai',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: () async {
@@ -319,7 +360,10 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                     }
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 16,
+                    ),
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey),
                       borderRadius: BorderRadius.circular(4),
@@ -332,7 +376,9 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                               ? '${selectedEndTime!.hour.toString().padLeft(2, '0')}:${selectedEndTime!.minute.toString().padLeft(2, '0')}'
                               : 'Pilih jam selesai',
                           style: TextStyle(
-                            color: selectedEndTime != null ? Colors.black : Colors.grey[600],
+                            color: selectedEndTime != null
+                                ? Colors.black
+                                : Colors.grey[600],
                           ),
                         ),
                         const Icon(Icons.access_time, size: 20),
@@ -359,7 +405,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                   );
                   return;
                 }
-                
+
                 if (selectedStartTime == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -369,7 +415,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                   );
                   return;
                 }
-                
+
                 if (selectedEndTime == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -379,24 +425,31 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                   );
                   return;
                 }
-                
-                final startMinutes = selectedStartTime!.hour * 60 + selectedStartTime!.minute;
-                final endMinutes = selectedEndTime!.hour * 60 + selectedEndTime!.minute;
-                
+
+                final startMinutes =
+                    selectedStartTime!.hour * 60 + selectedStartTime!.minute;
+                final endMinutes =
+                    selectedEndTime!.hour * 60 + selectedEndTime!.minute;
+
                 if (endMinutes <= startMinutes) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Jam selesai harus lebih besar dari jam mulai'),
+                      content: Text(
+                        'Jam selesai harus lebih besar dari jam mulai',
+                      ),
                       backgroundColor: Colors.red,
                     ),
                   );
                   return;
                 }
-                
-                final tanggal = '${selectedDate!.year}-${selectedDate!.month.toString().padLeft(2, '0')}-${selectedDate!.day.toString().padLeft(2, '0')}';
-                final jamMulai = '${selectedStartTime!.hour.toString().padLeft(2, '0')}:${selectedStartTime!.minute.toString().padLeft(2, '0')}';
-                final jamSelesai = '${selectedEndTime!.hour.toString().padLeft(2, '0')}:${selectedEndTime!.minute.toString().padLeft(2, '0')}';
-                
+
+                final tanggal =
+                    '${selectedDate!.year}-${selectedDate!.month.toString().padLeft(2, '0')}-${selectedDate!.day.toString().padLeft(2, '0')}';
+                final jamMulai =
+                    '${selectedStartTime!.hour.toString().padLeft(2, '0')}:${selectedStartTime!.minute.toString().padLeft(2, '0')}';
+                final jamSelesai =
+                    '${selectedEndTime!.hour.toString().padLeft(2, '0')}:${selectedEndTime!.minute.toString().padLeft(2, '0')}';
+
                 await addSchedule(tanggal, jamMulai, jamSelesai);
                 if (context.mounted) Navigator.pop(context);
               },
@@ -408,21 +461,22 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
     );
   }
 
-  Future<void> addSchedule(String tanggal, String jamMulai, String jamSelesai) async {
+  Future<void> addSchedule(
+    String tanggal,
+    String jamMulai,
+    String jamSelesai,
+  ) async {
     final request = context.read<CookieRequest>();
     try {
-      final response = await request.post(
-        '$baseUrl/coach/add-schedule/',
-        {
-          'tanggal': tanggal,
-          'jam_mulai': jamMulai,
-          'jam_selesai': jamSelesai,
-        }
-      );
+      final response = await request.post('$baseUrl/coach/add-schedule/', {
+        'tanggal': tanggal,
+        'jam_mulai': jamMulai,
+        'jam_selesai': jamSelesai,
+      });
 
       if (response['id'] != null) {
         await fetchDashboardData();
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Jadwal berhasil ditambahkan')),
@@ -433,23 +487,41 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
       }
     }
   }
 
   void showEditProfileModal() {
-    final nameController = TextEditingController(text: coachData?['name'] ?? '');
-    final ageController = TextEditingController(text: coachData?['age']?.toString() ?? '');
-    final citizenshipController = TextEditingController(text: coachData?['citizenship'] ?? '');
-    final clubController = TextEditingController(text: coachData?['club'] ?? '');
-    final licenseController = TextEditingController(text: coachData?['license'] ?? '');
-    final formationController = TextEditingController(text: coachData?['preffered_formation'] ?? '');
-    final avgTermController = TextEditingController(text: coachData?['average_term_as_coach']?.toString() ?? '');
-    final rateController = TextEditingController(text: coachData?['rate_per_session']?.toString() ?? '');
-    final descriptionController = TextEditingController(text: coachData?['description'] ?? '');
+    final nameController = TextEditingController(
+      text: coachData?['name'] ?? '',
+    );
+    final ageController = TextEditingController(
+      text: coachData?['age']?.toString() ?? '',
+    );
+    final citizenshipController = TextEditingController(
+      text: coachData?['citizenship'] ?? '',
+    );
+    final clubController = TextEditingController(
+      text: coachData?['club'] ?? '',
+    );
+    final licenseController = TextEditingController(
+      text: coachData?['license'] ?? '',
+    );
+    final formationController = TextEditingController(
+      text: coachData?['preffered_formation'] ?? '',
+    );
+    final avgTermController = TextEditingController(
+      text: coachData?['average_term_as_coach']?.toString() ?? '',
+    );
+    final rateController = TextEditingController(
+      text: coachData?['rate_per_session']?.toString() ?? '',
+    );
+    final descriptionController = TextEditingController(
+      text: coachData?['description'] ?? '',
+    );
 
     showDialog(
       context: context,
@@ -478,96 +550,123 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                   ),
                 ),
               const SizedBox(height: 24),
-              
+
               TextField(
                 controller: nameController,
                 decoration: const InputDecoration(
                   labelText: 'Name',
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 16,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               TextField(
                 controller: ageController,
                 decoration: const InputDecoration(
                   labelText: 'Age',
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 16,
+                  ),
                 ),
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 16),
-              
+
               TextField(
                 controller: citizenshipController,
                 decoration: const InputDecoration(
                   labelText: 'Citizenship',
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 16,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               TextField(
                 controller: clubController,
                 decoration: const InputDecoration(
                   labelText: 'Club',
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 16,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               TextField(
                 controller: licenseController,
                 decoration: const InputDecoration(
                   labelText: 'License',
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 16,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               TextField(
                 controller: formationController,
                 decoration: const InputDecoration(
                   labelText: 'Preferred Formation',
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 16,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               TextField(
                 controller: avgTermController,
                 decoration: const InputDecoration(
                   labelText: 'Average Term (Years)',
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 16,
+                  ),
                 ),
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 16),
-              
+
               TextField(
                 controller: rateController,
                 decoration: const InputDecoration(
                   labelText: 'Rate per Session',
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 16,
+                  ),
                 ),
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 16),
-              
+
               TextField(
                 controller: descriptionController,
                 decoration: const InputDecoration(
                   labelText: 'Description',
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 16,
+                  ),
                   alignLabelWithHint: true,
                 ),
                 maxLines: 4,
@@ -619,26 +718,24 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
     required String description,
   }) async {
     final request = context.read<CookieRequest>();
-    
+
     try {
-      final response = await request.post(
-        '$baseUrl/coach/update_coach_profile/',
-        {
-          'name': name,
-          'age': age,
-          'citizenship': citizenship,
-          'club': club,
-          'license': license,
-          'preffered_formation': formation,
-          'average_term_as_coach': avgTerm,
-          'rate_per_session': rate,
-          'description': description,
-        }
-      );
-      
+      final response = await request
+          .post('$baseUrl/coach/update_coach_profile/', {
+            'name': name,
+            'age': age,
+            'citizenship': citizenship,
+            'club': club,
+            'license': license,
+            'preffered_formation': formation,
+            'average_term_as_coach': avgTerm,
+            'rate_per_session': rate,
+            'description': description,
+          });
+
       if (response['status'] == 'success') {
         await fetchDashboardData();
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Profile berhasil diupdate')),
@@ -647,9 +744,9 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
       }
     }
   }
@@ -657,9 +754,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -678,6 +773,8 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildProfileSection(),
+              const SizedBox(height: 16),
+              _buildRatingSection(),
               const SizedBox(height: 16),
               _buildAddScheduleSection(),
               const SizedBox(height: 16),
@@ -765,7 +862,9 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     Text(coachData?['preffered_formation'] ?? 'N/A'),
-                    Text('Avg term: ${coachData?['average_term_as_coach'] ?? 'N/A'} Years'),
+                    Text(
+                      'Avg term: ${coachData?['average_term_as_coach'] ?? 'N/A'} Years',
+                    ),
                     Text(coachData?['license'] ?? 'N/A'),
                     const SizedBox(height: 8),
                     Text(
@@ -814,7 +913,10 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red[600],
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 12,
+                ),
               ),
               child: const Text('Tambahkan Jadwal'),
             ),
@@ -828,17 +930,18 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
     // Filter jadwal berdasarkan status yang dipilih
     List<dynamic> filteredJadwalList = jadwalList.where((jadwal) {
       if (selectedFilter == 'Semua') return true;
-      
-      final isBooked = jadwal['is_booked'] == true || 
-                       jadwal['is_booked'] == 1 || 
-                       jadwal['is_booked'] == 'true' ||
-                       jadwal['booking'] != null;
-      
+
+      final isBooked =
+          jadwal['is_booked'] == true ||
+          jadwal['is_booked'] == 1 ||
+          jadwal['is_booked'] == 'true' ||
+          jadwal['booking'] != null;
+
       final isPassed = _isSchedulePassed(
         jadwal['tanggal'],
         jadwal['jam_selesai'],
       );
-      
+
       if (selectedFilter == 'Waktu Telah Usai') {
         return isPassed;
       } else if (selectedFilter == 'Sudah dipesan') {
@@ -846,10 +949,10 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       } else if (selectedFilter == 'Tersedia') {
         return !isBooked && !isPassed;
       }
-      
+
       return true;
     }).toList();
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -875,7 +978,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
             ),
           ),
           const Divider(height: 24),
-          
+
           // Tab Filter
           Container(
             margin: const EdgeInsets.only(bottom: 16),
@@ -894,14 +997,14 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
               ),
             ),
           ),
-          
+
           // List Jadwal
           filteredJadwalList.isEmpty
               ? Padding(
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   child: Center(
                     child: Text(
-                      selectedFilter == 'Semua' 
+                      selectedFilter == 'Semua'
                           ? 'Belum ada jadwal.'
                           : 'Tidak ada jadwal dengan status "$selectedFilter".',
                       style: TextStyle(
@@ -917,25 +1020,27 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                   itemCount: filteredJadwalList.length,
                   itemBuilder: (context, index) {
                     final jadwal = filteredJadwalList[index];
-                    
-                    final isBooked = jadwal['is_booked'] == true || 
-                                     jadwal['is_booked'] == 1 || 
-                                     jadwal['is_booked'] == 'true' ||
-                                     jadwal['booking'] != null;
-                    
+
+                    final isBooked =
+                        jadwal['is_booked'] == true ||
+                        jadwal['is_booked'] == 1 ||
+                        jadwal['is_booked'] == 'true' ||
+                        jadwal['booking'] != null;
+
                     final isPassed = _isSchedulePassed(
                       jadwal['tanggal'],
                       jadwal['jam_selesai'],
                     );
                     final booking = jadwal['booking'];
-                    final hasNotes = isBooked && 
-                                     booking != null && 
-                                     booking['notes'] != null && 
-                                     booking['notes'].toString().trim().isNotEmpty;
-                    
+                    final hasNotes =
+                        isBooked &&
+                        booking != null &&
+                        booking['notes'] != null &&
+                        booking['notes'].toString().trim().isNotEmpty;
+
                     String statusText;
                     Color statusColor;
-                    
+
                     if (isPassed) {
                       statusText = 'Waktu Telah Usai';
                       statusColor = Colors.grey[600]!;
@@ -946,13 +1051,15 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                       statusText = 'Tersedia';
                       statusColor = Colors.green[600]!;
                     }
-                    
+
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: isPassed ? Colors.grey[400]! : Colors.blue[800]!,
+                          color: isPassed
+                              ? Colors.grey[400]!
+                              : Colors.blue[800]!,
                           width: 2,
                         ),
                         borderRadius: BorderRadius.circular(12),
@@ -974,7 +1081,9 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
-                                        color: isPassed ? Colors.grey[600] : Colors.blue[900],
+                                        color: isPassed
+                                            ? Colors.grey[600]
+                                            : Colors.blue[900],
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -1004,7 +1113,9 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w500,
-                                            color: isPassed ? Colors.grey[500] : Colors.black87,
+                                            color: isPassed
+                                                ? Colors.grey[500]
+                                                : Colors.black87,
                                           ),
                                         ),
                                       ),
@@ -1028,10 +1139,14 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                               width: double.infinity,
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: isPassed ? Colors.grey[100] : Colors.blue[50],
+                                color: isPassed
+                                    ? Colors.grey[100]
+                                    : Colors.blue[50],
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: isPassed ? Colors.grey[300]! : Colors.blue[200]!,
+                                  color: isPassed
+                                      ? Colors.grey[300]!
+                                      : Colors.blue[200]!,
                                   width: 1,
                                 ),
                               ),
@@ -1043,7 +1158,9 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                                       Icon(
                                         Icons.message,
                                         size: 16,
-                                        color: isPassed ? Colors.grey[600] : Colors.blue[700],
+                                        color: isPassed
+                                            ? Colors.grey[600]
+                                            : Colors.blue[700],
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
@@ -1051,7 +1168,9 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                                         style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
-                                          color: isPassed ? Colors.grey[600] : Colors.blue[700],
+                                          color: isPassed
+                                              ? Colors.grey[600]
+                                              : Colors.blue[700],
                                         ),
                                       ),
                                     ],
@@ -1061,7 +1180,9 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                                     booking['notes'],
                                     style: TextStyle(
                                       fontSize: 13,
-                                      color: isPassed ? Colors.grey[600] : Colors.grey[800],
+                                      color: isPassed
+                                          ? Colors.grey[600]
+                                          : Colors.grey[800],
                                       height: 1.4,
                                     ),
                                   ),
@@ -1078,13 +1199,13 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       ),
     );
   }
-  
+
   Widget _buildFilterTab(String label) {
     final isSelected = selectedFilter == label;
-    
+
     Color getTabColor() {
       if (!isSelected) return Colors.grey[300]!;
-      
+
       switch (label) {
         case 'Tersedia':
           return Colors.green[600]!;
@@ -1096,7 +1217,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
           return Colors.blue[900]!;
       }
     }
-    
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -1131,6 +1252,284 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
             fontSize: 14,
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildRatingSection() {
+    final reviewProvider = context.watch<ReviewProvider>();
+    
+    // Logic Filter Lokal di UI
+    List<dynamic> filteredReviews = reviewProvider.coachReviews;
+    if (_selectedStarFilter > 0) {
+      filteredReviews = filteredReviews.where((r) => r.rate == _selectedStarFilter).toList();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Reviews (${reviewProvider.totalReviews})',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue[900],
+                ),
+              ),
+              // Tombol Reset Filter jika sedang memfilter
+              if (_selectedStarFilter != 0)
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedStarFilter = 0;
+                    });
+                  },
+                  child: const Text('Reset Filter'),
+                ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+
+        // --- FILTER CHIPS (Rating Filter) ---
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildFilterChip(0, 'Semua'),
+              const SizedBox(width: 8),
+              _buildFilterChip(5, '5 ★'),
+              const SizedBox(width: 8),
+              _buildFilterChip(4, '4 ★'),
+              const SizedBox(width: 8),
+              _buildFilterChip(3, '3 ★'),
+              const SizedBox(width: 8),
+              _buildFilterChip(2, '2 ★'),
+              const SizedBox(width: 8),
+              _buildFilterChip(1, '1 ★'),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // --- HORIZONTAL LIST (Summary Card + Review Cards) ---
+        SizedBox(
+          height: 190, // Tinggi fixed agar bisa scroll horizontal
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            // Item count +1 karena index 0 dipakai untuk Summary Card
+            itemCount: filteredReviews.length + 1, 
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                // Item pertama selalu Summary Card (Rata-rata)
+                return _buildSummaryCard(reviewProvider);
+              } else {
+                // Item selanjutnya adalah Review Card
+                final review = filteredReviews[index - 1];
+                return _buildReviewCard(review);
+              }
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --- WIDGET HELPER BARU: TOMBOL FILTER ---
+  Widget _buildFilterChip(int star, String label) {
+    bool isSelected = _selectedStarFilter == star;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: Colors.blue[100],
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.blue[900] : Colors.grey[700],
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+      onSelected: (bool selected) {
+        setState(() {
+          _selectedStarFilter = star;
+        });
+      },
+    );
+  }
+
+  // --- WIDGET HELPER BARU: KARTU SUMMARY (RATA-RATA) ---
+  Widget _buildSummaryCard(ReviewProvider provider) {
+    return Container(
+      width: 280, // Lebar fixed
+      margin: const EdgeInsets.only(right: 12, bottom: 4, top: 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.15),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Sisi Kiri: Angka Besar
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                provider.averageRating.toStringAsFixed(1),
+                style: const TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              Row(
+                children: List.generate(5, (i) {
+                  return Icon(
+                    i < provider.averageRating.round() ? Icons.star : Icons.star_border,
+                    color: Colors.amber,
+                    size: 16,
+                  );
+                }),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${provider.totalReviews} ulasan',
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              ),
+            ],
+          ),
+          const SizedBox(width: 16),
+          // Sisi Kanan: Progress Bars
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(5, (i) {
+                final star = 5 - i;
+                final count = provider.ratingCounts[star] ?? 0;
+                final percent = provider.totalReviews == 0
+                    ? 0.0
+                    : count / provider.totalReviews;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    children: [
+                      Text('$star', style: const TextStyle(fontSize: 10)),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: LinearProgressIndicator(
+                          value: percent,
+                          minHeight: 4,
+                          backgroundColor: Colors.grey[200],
+                          color: Colors.blue[800],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- WIDGET HELPER BARU: KARTU REVIEW INDIVIDUAL ---
+  Widget _buildReviewCard(dynamic review) {
+    // Parsing data review (sesuaikan dengan field di model/json kamu)
+    // Asumsi review punya field: user (username), rate, review (text), created_at
+    // Jika pake model class, ganti review['field'] jadi review.field
+    
+    // Handle formatting tanggal simpel manual (tanpa intl package)
+    String dateStr = "Recently";
+    if (review.createdAt != null) {
+       DateTime dt = review.createdAt; // Asumsi fieldnya createdAt tipe DateTime
+       dateStr = "${dt.day}/${dt.month}/${dt.year}";
+    }
+
+    return Container(
+      width: 260, // Lebar kartu review
+      margin: const EdgeInsets.only(right: 12, bottom: 4, top: 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Bintang
+          Row(
+            children: List.generate(5, (index) {
+              return Icon(
+                index < review.rate ? Icons.star : Icons.star_border,
+                color: Colors.amber,
+                size: 18,
+              );
+            }),
+          ),
+          const SizedBox(height: 8),
+          
+          // User & Date
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                review.user ?? 'Anonymous', // Username
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                dateStr,
+                style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 8),
+          const Divider(),
+          const SizedBox(height: 8),
+          
+          // Isi Review
+          Expanded(
+            child: Text(
+              review.review != null && review.review.isNotEmpty 
+                  ? review.review 
+                  : 'Tidak ada komentar.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[800],
+                fontStyle: (review.review == null || review.review.isEmpty) 
+                    ? FontStyle.italic 
+                    : FontStyle.normal,
+              ),
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }
