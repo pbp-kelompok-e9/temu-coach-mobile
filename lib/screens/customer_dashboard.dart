@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:temu_coach_mobile/providers/auth_provider.dart';
-import 'package:temu_coach_mobile/services/report_service.dart';
+import 'package:temu_coach_mobile/providers/report_provider.dart';
 import '../providers/customer_provider.dart';
 import '../models/booking_model.dart';
 import '../widgets/app_drawer.dart';
@@ -272,7 +271,7 @@ class _BookingCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 TextButton.icon(
                   onPressed: () {
-                    _showReportDialog(context, booking.coachId);
+                    showReportDialog(context, booking.coachId);
                   },
                   icon: const Icon(Icons.flag, color: Colors.red),
                   label: const Text(
@@ -287,52 +286,59 @@ class _BookingCard extends StatelessWidget {
     );
   }
 
-  void _showReportDialog(BuildContext context, int coachId) {
-    final controller = TextEditingController();
-    final request = context.read<AuthProvider>().request;
+void showReportDialog(BuildContext context, int coachId) {
+  final controller = TextEditingController();
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Laporkan Coach'),
-        content: TextField(
-          controller: controller,
-          maxLines: 4,
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Laporkan Coach'),
+      content: TextField(
+        controller: controller,
+        maxLines: 4,
+        decoration: const InputDecoration(
+          hintText: 'Tulis alasan laporan...',
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (controller.text.trim().isEmpty) return;
-
-              final reportService = ReportService(request);
-
-              final success = await reportService.createReport(
-                coachId: coachId,
-                reason: controller.text.trim(),
-              );
-
-              if (!ctx.mounted) return;
-              Navigator.pop(ctx);
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    success
-                        ? 'Report berhasil dikirim'
-                        : 'Gagal mengirim report',
-                  ),
-                ),
-              );
-            },
-            child: const Text('Kirim'),
-          ),
-        ],
       ),
-    );
-  }
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Batal'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            final reason = controller.text.trim();
+            if (reason.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Alasan tidak boleh kosong')),
+              );
+              return;
+            }
+
+            final provider = context.read<ReportProvider>();
+            final success = await provider.createReport(coachId, reason);
+
+            if (!ctx.mounted) return;
+
+            Navigator.pop(ctx);
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  success
+                      ? 'Report berhasil dikirim'
+                      : provider.error ?? 'Gagal mengirim report',
+                ),
+                backgroundColor: success ? Colors.green : Colors.red,
+              ),
+            );
+          },
+          child: const Text('Kirim'),
+        ),
+      ],
+    ),
+  );
+}
+
 
 }
