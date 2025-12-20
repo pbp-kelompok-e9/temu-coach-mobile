@@ -8,9 +8,15 @@ import 'providers/booking_provider.dart';
 import 'providers/review_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/review_screen.dart';
+import 'services/connectivity_service.dart';
 import 'theme/app_theme.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize connectivity service
+  await ConnectivityService().initialize();
+  
   runApp(const MyApp());
 }
 

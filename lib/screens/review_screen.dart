@@ -136,7 +136,23 @@ class _ReviewScreenState extends State<ReviewScreen> {
     final provider = context.watch<ReviewProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Review Sesi')),
+      appBar: AppBar(
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/images/logo_whistle.png',
+              width: 28,
+              height: 28,
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.sports, color: Colors.white),
+            ),
+            const SizedBox(width: 8),
+            const Text('Review'),
+          ],
+        ),
+        backgroundColor: const Color(0xFF003E85),
+        foregroundColor: Colors.white,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
