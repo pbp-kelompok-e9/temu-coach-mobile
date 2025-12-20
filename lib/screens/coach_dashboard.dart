@@ -666,8 +666,21 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       backgroundColor: Colors.grey[100],
       drawer: const AppDrawer(),
       appBar: AppBar(
-        title: const Text('Coach Dashboard'),
-        backgroundColor: Colors.blue[900],
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/images/logo_whistle.png',
+              width: 28,
+              height: 28,
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.sports, color: Colors.white),
+            ),
+            const SizedBox(width: 8),
+            const Text('Coach'),
+          ],
+        ),
+        backgroundColor: const Color(0xFF003E85),
+        foregroundColor: Colors.white,
       ),
       body: RefreshIndicator(
         onRefresh: fetchDashboardData,

@@ -98,23 +98,16 @@ class ChatService {
   /// Edit a message
   Future<bool> editMessage(int messageId, String newContent) async {
     try {
-      // Get cookies from CookieRequest
-      final cookies = request.cookies;
-      final cookieHeader = cookies.entries.map((e) => '${e.key}=${e.value}').join('; ');
-      
-      final response = await http.put(
-        Uri.parse('$baseUrl/chat/api/message/$messageId/edit/'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': cookieHeader,
-        },
-        body: jsonEncode({'content': newContent}),
+      // Use CookieRequest's postJson with PUT method simulation
+      final response = await request.postJson(
+        '$baseUrl/chat/api/message/$messageId/edit/',
+        jsonEncode({'content': newContent, '_method': 'PUT'}),
       );
       
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['success'] == true;
+      if (response['success'] == true) {
+        return true;
       }
+      print('Edit message failed: ${response['error'] ?? 'Unknown error'}');
       return false;
     } catch (e) {
       print('Error editing message: $e');
@@ -125,22 +118,16 @@ class ChatService {
   /// Delete a message
   Future<bool> deleteMessage(int messageId) async {
     try {
-      // Get cookies from CookieRequest
-      final cookies = request.cookies;
-      final cookieHeader = cookies.entries.map((e) => '${e.key}=${e.value}').join('; ');
-      
-      final response = await http.delete(
-        Uri.parse('$baseUrl/chat/api/message/$messageId/delete/'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': cookieHeader,
-        },
+      // Use CookieRequest's postJson with DELETE method simulation
+      final response = await request.postJson(
+        '$baseUrl/chat/api/message/$messageId/delete/',
+        jsonEncode({'_method': 'DELETE'}),
       );
       
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['success'] == true;
+      if (response['success'] == true) {
+        return true;
       }
+      print('Delete message failed: ${response['error'] ?? 'Unknown error'}');
       return false;
     } catch (e) {
       print('Error deleting message: $e');

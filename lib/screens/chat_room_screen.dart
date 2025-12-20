@@ -2,8 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
+import 'package:intl/intl.dart';
 import '../models/chat_message.dart';
 import '../services/chat_service.dart';
+import '../services/connectivity_service.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/chat_input.dart';
 
@@ -21,7 +23,7 @@ class ChatRoomScreen extends StatefulWidget {
   State<ChatRoomScreen> createState() => _ChatRoomScreenState();
 }
 
-class _ChatRoomScreenState extends State<ChatRoomScreen> {
+class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObserver {
   late ChatService _chatService;
   final ScrollController _scrollController = ScrollController();
   final GlobalKey<ChatInputState> _inputKey = GlobalKey();
@@ -30,31 +32,116 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   String _receiverName = '';
   bool _isLoading = true;
   bool _isSending = false;
+  String? _errorMessage;
   Timer? _refreshTimer;
   
   // For editing
   int? _editingMessageId;
   String? _editingContent;
+  
+  // Connectivity
+  StreamSubscription<bool>? _connectivitySubscription;
+  bool _isOnline = true;
 
   @override
   void initState() {
     super.initState();
     _receiverName = widget.receiverName ?? '';
+    
+    // Register lifecycle observer
+    WidgetsBinding.instance.addObserver(this);
+    
     _initChat();
+    _initConnectivity();
+  }
+
+  void _initConnectivity() {
+    final service = ConnectivityService();
+    _isOnline = service.isConnected;
+    
+    _connectivitySubscription = service.connectivityStream.listen((isConnected) {
+      if (mounted) {
+        final wasOffline = !_isOnline;
+        setState(() => _isOnline = isConnected);
+        
+        if (isConnected && wasOffline) {
+          _showSnackBar('Terhubung kembali', Colors.green);
+          _loadMessages();
+        } else if (!isConnected) {
+          _showSnackBar('Tidak ada koneksi internet', Colors.red);
+        }
+      }
+    });
+  }
+
+  void _showSnackBar(String message, Color color) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                color == Colors.green ? Icons.wifi : Icons.wifi_off,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 12),
+              Text(message),
+            ],
+          ),
+          backgroundColor: color,
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: color == Colors.green ? 2 : 5),
+        ),
+      );
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    switch (state) {
+      case AppLifecycleState.resumed:
+        // App came back to foreground - refresh messages
+        _loadMessages();
+        _startRefreshTimer();
+        break;
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+        // App going to background - stop timer
+        _refreshTimer?.cancel();
+        break;
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        break;
+    }
   }
 
   void _initChat() {
     final request = context.read<CookieRequest>();
     _chatService = ChatService(request);
     _loadMessages();
-    
-    // Auto-fetch every 3 seconds
+    _startRefreshTimer();
+  }
+
+  void _startRefreshTimer() {
+    _refreshTimer?.cancel();
     _refreshTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      _loadMessages(silent: true);
+      if (_isOnline) {
+        _loadMessages(silent: true);
+      }
     });
   }
 
   Future<void> _loadMessages({bool silent = false}) async {
+    if (!_isOnline && !silent) {
+      setState(() {
+        _errorMessage = 'Tidak ada koneksi internet';
+        _isLoading = false;
+      });
+      return;
+    }
+
     if (!silent && mounted) {
       setState(() => _isLoading = true);
     }
@@ -66,6 +153,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           _messages = result['messages'] as List<ChatMessage>;
           _receiverName = result['receiver_name'] ?? _receiverName;
           _isLoading = false;
+          _errorMessage = null;
         });
         
         // Scroll to bottom on first load
@@ -75,7 +163,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          if (!silent) _errorMessage = 'Gagal memuat pesan';
+        });
       }
     }
   }
@@ -93,7 +184,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   }
 
   Future<void> _sendMessage(String content) async {
-    if (_isSending) return;
+    if (_isSending || !_isOnline) {
+      if (!_isOnline) {
+        _showSnackBar('Tidak dapat mengirim - Tidak ada koneksi', Colors.red);
+      }
+      return;
+    }
     
     setState(() => _isSending = true);
     
@@ -115,6 +211,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               const SnackBar(
                 content: Text('Pesan berhasil diedit'),
                 backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
               ),
             );
           }
@@ -124,6 +221,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               const SnackBar(
                 content: Text('Gagal mengedit pesan'),
                 backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
               ),
             );
           }
@@ -142,6 +240,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               const SnackBar(
                 content: Text('Gagal mengirim pesan'),
                 backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
               ),
             );
           }
@@ -174,16 +273,26 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus Pesan'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.delete, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Hapus Pesan'),
+          ],
+        ),
         content: const Text('Apakah Anda yakin ingin menghapus pesan ini?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Batal'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Hapus'),
           ),
         ],
@@ -201,6 +310,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             const SnackBar(
               content: Text('Pesan berhasil dihapus'),
               backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
             ),
           );
         }
@@ -210,6 +320,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             const SnackBar(
               content: Text('Gagal menghapus pesan'),
               backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
             ),
           );
         }
@@ -219,120 +330,259 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _refreshTimer?.cancel();
     _scrollController.dispose();
+    _connectivitySubscription?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-              child: Text(
-                _receiverName.isNotEmpty ? _receiverName[0].toUpperCase() : '?',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                _receiverName,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => _loadMessages(),
-            tooltip: 'Refresh',
-          ),
-        ],
-      ),
+      backgroundColor: Colors.grey[100],
       body: Column(
         children: [
+          // Custom app bar like website
+          _buildAppBar(),
+          
+          // Offline banner
+          if (!_isOnline)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              color: Colors.red[700],
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.wifi_off, color: Colors.white, size: 16),
+                  SizedBox(width: 8),
+                  Text(
+                    'Mode Offline - Pesan mungkin tidak terkirim',
+                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          
+          // Error banner with retry
+          if (_errorMessage != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              color: Colors.red[50],
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red[700], size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _errorMessage!,
+                      style: TextStyle(color: Colors.red[700], fontSize: 13),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _loadMessages,
+                    child: const Text('Coba Lagi'),
+                  ),
+                ],
+              ),
+            ),
+          
+          // Messages area
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _messages.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.chat_bubble_outline,
-                              size: 64,
-                              color: Colors.grey[400],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Belum ada pesan',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Mulai percakapan dengan mengirim pesan',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[400],
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        itemCount: _messages.length,
-                        itemBuilder: (context, index) {
-                          final message = _messages[index];
-                          
-                          // Show date separator
-                          Widget? dateSeparator;
-                          if (index == 0 ||
-                              !_isSameDay(
-                                _messages[index - 1].timestamp,
-                                message.timestamp,
-                              )) {
-                            dateSeparator = _buildDateSeparator(message.timestamp);
-                          }
-                          
-                          return Column(
-                            children: [
-                              if (dateSeparator != null) dateSeparator,
-                              ChatBubble(
-                                message: message,
-                                onEdit: message.canEdit
-                                    ? () => _startEditMessage(message)
-                                    : null,
-                                onDelete: message.canDelete
-                                    ? () => _deleteMessage(message)
-                                    : null,
-                              ),
-                            ],
-                          );
-                        },
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.grey[50]!, Colors.white],
+                ),
+              ),
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFDE3400),
                       ),
+                    )
+                  : _messages.isEmpty
+                      ? _buildEmptyState()
+                      : _buildMessagesList(),
+            ),
           ),
+          
+          // Chat input
           ChatInput(
             key: _inputKey,
             onSend: _sendMessage,
             editingMessage: _editingContent,
             onCancelEdit: _cancelEdit,
+            isEnabled: _isOnline,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAppBar() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF003E85), Color(0xFF0052B3)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            children: [
+              // Back button
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+              
+              // Avatar
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFDE3400), Color(0xFFFF6B3D)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFDE3400).withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    _receiverName.isNotEmpty ? _receiverName[0].toUpperCase() : '?',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              
+              // Name only (removed online status)
+              Expanded(
+                child: Text(
+                  _receiverName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              
+              // Refresh button
+              IconButton(
+                icon: const Icon(Icons.refresh, color: Colors.white),
+                onPressed: _isOnline ? _loadMessages : null,
+                tooltip: 'Refresh',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFE5DD),
+              borderRadius: BorderRadius.circular(60),
+            ),
+            child: const Icon(
+              Icons.chat_bubble_outline,
+              size: 56,
+              color: Color(0xFFDE3400),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Belum ada pesan',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF003E85),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Mulai percakapan dengan\nmengirim pesan pertama',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessagesList() {
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      itemCount: _messages.length,
+      itemBuilder: (context, index) {
+        final message = _messages[index];
+        
+        // Show date separator
+        Widget? dateSeparator;
+        if (index == 0 ||
+            !_isSameDay(
+              _messages[index - 1].timestamp,
+              message.timestamp,
+            )) {
+          dateSeparator = _buildDateSeparator(message.timestamp);
+        }
+        
+        return Column(
+          children: [
+            if (dateSeparator != null) dateSeparator,
+            ChatBubble(
+              message: message,
+              onEdit: message.canEdit
+                  ? () => _startEditMessage(message)
+                  : null,
+              onDelete: message.canDelete
+                  ? () => _deleteMessage(message)
+                  : null,
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -354,23 +604,31 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     } else if (messageDate == yesterday) {
       dateText = 'Kemarin';
     } else {
-      dateText = '${date.day}/${date.month}/${date.year}';
+      dateText = DateFormat('d MMMM yyyy', 'id').format(date);
     }
     
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(12),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Text(
             dateText,
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
             ),
           ),
         ),
