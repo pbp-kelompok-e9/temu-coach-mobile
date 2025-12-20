@@ -6,11 +6,18 @@ import 'providers/coach_provider.dart';
 import 'providers/admin_provider.dart';
 import 'providers/booking_provider.dart';
 import 'providers/review_provider.dart';
+import 'providers/report_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/review_screen.dart';
+import 'services/connectivity_service.dart';
 import 'theme/app_theme.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize connectivity service
+  await ConnectivityService().initialize();
+  
   runApp(const MyApp());
 }
 
@@ -44,6 +51,11 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider<ReviewProvider>(
           create: (context) => ReviewProvider(
             Provider.of<CookieRequest>(context, listen: false),
+          ),
+        ),
+        ChangeNotifierProvider<ReportProvider>(
+          create: (context) => ReportProvider(
+            context.read<CookieRequest>(),
           ),
         ),
       ],
