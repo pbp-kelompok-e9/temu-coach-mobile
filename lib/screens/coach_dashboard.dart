@@ -17,6 +17,9 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
   Map<String, dynamic>? coachData;
   List<dynamic> jadwalList = [];
   bool isLoading = true;
+  
+
+  String selectedFilter = 'Semua'; 
 
   @override
   void initState() {
@@ -32,27 +35,21 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
     });
   }
 
-  // Helper function untuk mengecek apakah jadwal sudah lewat
   bool _isSchedulePassed(String tanggal, String jamSelesai) {
     try {
-      // Parse tanggal (format: YYYY-MM-DD)
       final dateParts = tanggal.split('-');
       final year = int.parse(dateParts[0]);
       final month = int.parse(dateParts[1]);
       final day = int.parse(dateParts[2]);
       
-      // Parse jam selesai (format: HH:MM)
       final timeParts = jamSelesai.split(':');
       final hour = int.parse(timeParts[0]);
       final minute = int.parse(timeParts[1]);
       
-      // Buat DateTime dari jadwal
       final scheduleDateTime = DateTime(year, month, day, hour, minute);
       
-      // Bandingkan dengan waktu sekarang
       return scheduleDateTime.isBefore(DateTime.now());
     } catch (e) {
-      print('Error parsing date/time: $e');
       return false;
     }
   }
@@ -66,13 +63,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
     }
     
     try {
-      print('🔍 Fetching: $baseUrl/coach/api/coach-profile/');
-      print('🔍 LoggedIn: ${request.loggedIn}');
-      
       final response = await request.get("$baseUrl/coach/api/coach-profile/");
-      
-      print('✅ Response: $response');
-      print('📋 Full jadwal_list: ${response['jadwal_list']}');
       
       if (response == null) {
         throw Exception('Response is null');
@@ -115,8 +106,6 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       }
       
     } catch (e) {
-      print('❌ Error: $e');
-      
       setState(() {
         isLoading = false;
       });
@@ -422,8 +411,6 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
   Future<void> addSchedule(String tanggal, String jamMulai, String jamSelesai) async {
     final request = context.read<CookieRequest>();
     try {
-      print('📤 Mengirim jadwal baru: $tanggal $jamMulai-$jamSelesai');
-      
       final response = await request.post(
         '$baseUrl/coach/add-schedule/',
         {
@@ -433,10 +420,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
         }
       );
 
-      print('📥 Response add-schedule: $response');
-
       if (response['id'] != null) {
-        // Refresh data dari server untuk memastikan data terbaru
         await fetchDashboardData();
         
         if (mounted) {
@@ -448,7 +432,6 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
         throw Exception('Response tidak memiliki id');
       }
     } catch (e) {
-      print('❌ Error add schedule: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: ${e.toString()}')),
@@ -842,6 +825,31 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
   }
 
   Widget _buildScheduleSection() {
+    // Filter jadwal berdasarkan status yang dipilih
+    List<dynamic> filteredJadwalList = jadwalList.where((jadwal) {
+      if (selectedFilter == 'Semua') return true;
+      
+      final isBooked = jadwal['is_booked'] == true || 
+                       jadwal['is_booked'] == 1 || 
+                       jadwal['is_booked'] == 'true' ||
+                       jadwal['booking'] != null;
+      
+      final isPassed = _isSchedulePassed(
+        jadwal['tanggal'],
+        jadwal['jam_selesai'],
+      );
+      
+      if (selectedFilter == 'Waktu Telah Usai') {
+        return isPassed;
+      } else if (selectedFilter == 'Sudah dipesan') {
+        return isBooked && !isPassed;
+      } else if (selectedFilter == 'Tersedia') {
+        return !isBooked && !isPassed;
+      }
+      
+      return true;
+    }).toList();
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -867,27 +875,49 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
             ),
           ),
           const Divider(height: 24),
-          jadwalList.isEmpty
-              ? Text(
-                  'Belum ada jadwal.',
-                  style: TextStyle(
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey[500],
+          
+          // Tab Filter
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildFilterTab('Semua'),
+                  const SizedBox(width: 8),
+                  _buildFilterTab('Tersedia'),
+                  const SizedBox(width: 8),
+                  _buildFilterTab('Sudah dipesan'),
+                  const SizedBox(width: 8),
+                  _buildFilterTab('Waktu Telah Usai'),
+                ],
+              ),
+            ),
+          ),
+          
+          // List Jadwal
+          filteredJadwalList.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: Text(
+                      selectedFilter == 'Semua' 
+                          ? 'Belum ada jadwal.'
+                          : 'Tidak ada jadwal dengan status "$selectedFilter".',
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: Colors.grey[500],
+                      ),
+                    ),
                   ),
                 )
               : ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: jadwalList.length,
+                  itemCount: filteredJadwalList.length,
                   itemBuilder: (context, index) {
-                    final jadwal = jadwalList[index];
+                    final jadwal = filteredJadwalList[index];
                     
-                    // Debug: Print jadwal info
-                    print('📅 Jadwal #$index: ${jadwal['tanggal']} ${jadwal['jam_mulai']}-${jadwal['jam_selesai']}');
-                    print('   is_booked value: ${jadwal['is_booked']} (type: ${jadwal['is_booked'].runtimeType})');
-                    print('   booking data: ${jadwal['booking']}');
-                    
-                    // Check is_booked dengan multiple conditions untuk handle berbagai tipe data
                     final isBooked = jadwal['is_booked'] == true || 
                                      jadwal['is_booked'] == 1 || 
                                      jadwal['is_booked'] == 'true' ||
@@ -903,9 +933,6 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                                      booking['notes'] != null && 
                                      booking['notes'].toString().trim().isNotEmpty;
                     
-                    print('   Final isBooked: $isBooked, isPassed: $isPassed');
-                    
-                    // Tentukan status dan warna
                     String statusText;
                     Color statusColor;
                     
@@ -984,7 +1011,6 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                                   ],
                                 ),
                               ),
-                              // Hanya tampilkan tombol Batalkan jika waktu belum usai
                               if (!isPassed)
                                 ElevatedButton(
                                   onPressed: () => deleteSchedule(jadwal['id']),
@@ -1049,6 +1075,62 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                   },
                 ),
         ],
+      ),
+    );
+  }
+  
+  Widget _buildFilterTab(String label) {
+    final isSelected = selectedFilter == label;
+    
+    Color getTabColor() {
+      if (!isSelected) return Colors.grey[300]!;
+      
+      switch (label) {
+        case 'Tersedia':
+          return Colors.green[600]!;
+        case 'Sudah dipesan':
+          return Colors.red[600]!;
+        case 'Waktu Telah Usai':
+          return Colors.grey[600]!;
+        default:
+          return Colors.blue[900]!;
+      }
+    }
+    
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedFilter = label;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? getTabColor() : Colors.grey[200],
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? getTabColor() : Colors.grey[400]!,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: getTabColor().withOpacity(0.3),
+                    spreadRadius: 1,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey[700],
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 14,
+          ),
+        ),
       ),
     );
   }
