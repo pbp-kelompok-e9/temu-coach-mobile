@@ -25,44 +25,41 @@ class ReviewProvider with ChangeNotifier {
     loading = true;
     error = null;
     
-    // URL WAJIB PAKE SLASH DI UJUNG
-    final urlPath = '/reviews/check/booking/$bookingId/'; 
+    // --- FIX FINAL: PAKAI FULL URL (HTTPS) ---
+    // Jangan pake '/reviews/...' doang. Wajib lengkap biar ga nyasar.
+    final url = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id/reviews/check/booking/$bookingId/'; 
 
     try {
-      debugPrint("🔍 REQUESTING: $urlPath");
-      final resp = await request.get(urlPath);
+      debugPrint("🔍 REQUESTING: $url");
+      final resp = await request.get(url);
       
       debugPrint("✅ SUCCESS JSON: $resp");
       
-      // ... (lanjutkan logic parsing has_review seperti biasa) ...
+      // Parse data
       hasReviewed = resp['has_review'] == true;
-      if (hasReviewed) {
-         // ... parsing data review ...
+      
+      if (hasReviewed && resp['review'] != null) {
+         // Masukin data ke userReview biar form terisi otomatis
+         final reviewData = resp['review'];
+         userReviewId = reviewData['id'];
+         userReview = ReviewModel(
+            id: reviewData['id'],
+            coach: "", // Dummy, ga penting disini
+            user: "",  // Dummy
+            rate: reviewData['rate'] ?? 0,
+            review: reviewData['review'],
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now()
+         );
+      } else {
+         userReview = null;
+         userReviewId = null;
       }
 
     } catch (e) {
-      debugPrint("❌ ERROR PARSING: $e");
-      
-      // JIKA ERROR KARENA HTML, KITA BACA ISINYA
-      // Kita pakai try-catch lagi di sini khusus buat debug text response
-      try {
-         // Trik: request ulang pake http package biasa buat dapet body mentahnya
-         // (Pastikan import 'package:http/http.dart' as http;)
-         // Ganti domain sesuai punya lo
-         final rawUrl = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id$urlPath';
-         debugPrint("🕵️ INI ISI HTML YANG BIKIN ERROR:");
-         debugPrint("------------------------------------------------");
-         
-         // Kita print pesan errornya aja biar ga kepanjangan
-         // (Biasanya ada di tag <title>...</title>)
-         // Note: Ini cuma buat debug, ga perlu cookie login dulu gpp
-         // yang penting kita tau ini halaman Login, 404, atau 500.
-         var response = await request.jsonData; // Atau access internal client kalo bisa
-         // Atau kalau susah, cukup liat log error 'e' di atas. 
-         // Biasanya FormatException ada potongan text-nya.
-      } catch (_) {}
-      
+      debugPrint("❌ ERROR CHECK REVIEW: $e");
       hasReviewed = false;
+      userReview = null;
     } finally {
       loading = false;
       notifyListeners();
@@ -165,50 +162,87 @@ class ReviewProvider with ChangeNotifier {
     }
   }
 
+  // lib/providers/review_provider.dart
+
   Future<bool> deleteReview() async {
-    if (userReviewId == null) return false;
+    if (userReviewId == null) {
+      debugPrint("❌ DELETE ERROR: userReviewId is null");
+      return false;
+    }
+
+    // --- FIX: USE FULL URL (HTTPS) ---
+    final url = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id/reviews/delete/$userReviewId/';
 
     try {
-      final resp = await request.post('/reviews/delete/$userReviewId/?format=json', {});
+      debugPrint("🗑️ DELETING REVIEW AT: $url");
+      
+      // Use 'post' as your backend expects POST for deletion
+      // You can pass an empty body map {} if required by the library
+      final resp = await request.post(url, {});
 
+      debugPrint("✅ DELETE RESPONSE: $resp");
+
+      // Check for success flag from Django response
       if (resp['success'] == true) {
         hasReviewed = false;
         userReview = null;
         userReviewId = null;
         notifyListeners();
+        return true;
+      } else {
+        debugPrint("❌ DELETE FAILED: ${resp['error']}");
+        error = resp['error'];
+        return false;
       }
-
-      return resp['success'] == true;
-    } catch (_) {
+    } catch (e) {
+      debugPrint("❌ DELETE EXCEPTION: $e");
       return false;
     }
   }
+
+  // review_provider.dart
 
   Future<void> fetchReviewsByCoach(int coachId) async {
     loading = true;
     error = null;
     notifyListeners();
 
+    // --- SOLUSI: PAKAI FULL URL (HTTPS) ---
+    // Jangan pake '/reviews/...' doang. Tembak langsung ke jantung servernya.
+    final url = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id/reviews/get_reviews_by_coach/$coachId/';
+    
+    debugPrint("🕵️ [DEBUG] Fetching Full URL: $url");
+
     try {
-      final resp = await request.get('/reviews/get_reviews_by_coach/$coachId/');
+      final resp = await request.get(url);
 
-      final List data = resp['reviews'] ?? [];
+      debugPrint("📦 [DEBUG] Raw Response: $resp");
 
-      coachReviews = data.map((e) => ReviewModel.fromJson(e)).toList();
-      totalReviews = coachReviews.length;
-      if (totalReviews > 0) {
-        final totalRate = coachReviews.fold<int>(0, (sum, r) => sum + r.rate);
-        averageRating = totalRate / totalReviews;
+      if (resp['status'] == 'success') {
+        final List data = resp['reviews'] ?? [];
+        
+        coachReviews = data.map((e) {
+          try {
+            return ReviewModel.fromJson(e);
+          } catch (err) {
+            debugPrint("💥 Parsing Error: $err");
+            throw err;
+          }
+        }).toList();
+        
+        totalReviews = coachReviews.length;
+        
+        if (totalReviews > 0) {
+          final totalRate = coachReviews.fold<int>(0, (sum, r) => sum + r.rate);
+          averageRating = totalRate / totalReviews;
+        } else {
+          averageRating = 0.0;
+        }
       } else {
-        averageRating = 0.0;
-      }
-
-      ratingCounts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
-
-      for (final r in coachReviews) {
-        ratingCounts[r.rate] = (ratingCounts[r.rate] ?? 0) + 1;
+        coachReviews = [];
       }
     } catch (e) {
+      debugPrint("❌ [DEBUG] ERROR: $e");
       error = e.toString();
     } finally {
       loading = false;

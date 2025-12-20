@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/review_provider.dart'; // Sesuaikan path import provider kamu
+import '../providers/review_provider.dart';
 
 class ReviewScreen extends StatefulWidget {
   final int bookingId;
@@ -19,7 +19,6 @@ class _ReviewScreenState extends State<ReviewScreen> {
   @override
   void initState() {
     super.initState();
-    // Jalanin pengecekan setelah frame pertama dirender
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadReviewData();
     });
@@ -27,11 +26,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   Future<void> _loadReviewData() async {
     final provider = context.read<ReviewProvider>();
-    
-    // 1. Cek ke backend
     await provider.checkReviewForBooking(widget.bookingId);
 
-    // 2. Kalau data ditemukan (User mau edit), isi form dengan data lama
     if (provider.hasReviewed && provider.userReview != null) {
       setState(() {
         _rating = provider.userReview!.rate;
@@ -39,9 +35,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
       });
     }
 
-    setState(() {
-      _isInitialLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isInitialLoading = false;
+      });
+    }
   }
 
   @override
@@ -50,62 +48,37 @@ class _ReviewScreenState extends State<ReviewScreen> {
     super.dispose();
   }
 
-  // --- Logic Submit (Create / Update) ---
   Future<void> _submitReview() async {
     final provider = context.read<ReviewProvider>();
 
-    // Validasi sederhana
     if (_rating == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Mohon beri rating bintang ⭐'),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text('Mohon beri rating bintang ⭐'), backgroundColor: Colors.red),
       );
       return;
     }
 
     bool success;
-    
-    // Cek apakah mode UPDATE atau CREATE
     if (provider.hasReviewed) {
-      // Mode UPDATE
-      success = await provider.updateReview(
-        _rating,
-        _reviewController.text,
-      );
+      success = await provider.updateReview(_rating, _reviewController.text);
     } else {
-      // Mode CREATE
-      success = await provider.createReview(
-        widget.bookingId,
-        _rating,
-        _reviewController.text,
-      );
+      success = await provider.createReview(widget.bookingId, _rating, _reviewController.text);
     }
 
     if (!mounted) return;
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.hasReviewed 
-            ? 'Review berhasil diperbarui!' 
-            : 'Review berhasil dikirim!'),
-          backgroundColor: Colors.green,
-        ),
+        const SnackBar(content: Text('Review berhasil disimpan!'), backgroundColor: Colors.green),
       );
-      Navigator.pop(context, true); // Balik dan kasih sinyal success
+      Navigator.pop(context, true);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.error ?? 'Gagal menyimpan review'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(provider.error ?? 'Gagal menyimpan review'), backgroundColor: Colors.red),
       );
     }
   }
 
-  // --- Logic Delete ---
   Future<void> _deleteReview() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -113,10 +86,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
         title: const Text('Hapus Review?'),
         content: const Text('Apakah Anda yakin ingin menghapus ulasan ini?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Hapus', style: TextStyle(color: Colors.red)),
@@ -138,62 +108,164 @@ class _ReviewScreenState extends State<ReviewScreen> {
     }
   }
 
-  // --- Widget Bintang ---
+  // Widget Bintang Custom
   Widget _buildStar(int index) {
-    return IconButton(
-      icon: Icon(
-        index <= _rating ? Icons.star : Icons.star_border,
-        color: Colors.amber,
-        size: 40,
-      ),
-      onPressed: () {
+    return GestureDetector(
+      onTap: () {
         setState(() {
           _rating = index;
         });
       },
+      child: Padding(
+        padding: const EdgeInsets.only(right: 8.0),
+        child: Icon(
+          index <= _rating ? Icons.star : Icons.star_border,
+          color: Colors.amber,
+          size: 32,
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ReviewProvider>();
+    final isUpdateMode = provider.hasReviewed;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Review Sesi')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Rating', style: TextStyle(fontSize: 16)),
-            Row(children: List.generate(5, (i) => _buildStar(i + 1))),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _reviewController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Review (opsional)',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _submitReview,
-              child: Text(
-                provider.hasReviewed ? 'Update Review' : 'Kirim Review',
-              ),
-            ),
-            if (provider.hasReviewed)
-              TextButton(
-                onPressed: _deleteReview,
-                child: const Text(
-                  'Hapus Review',
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
-          ],
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
+      body: _isInitialLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Judul Besar
+                  const Text(
+                    'Review',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Section Rating
+                  const Text(
+                    'Rating',
+                    style: TextStyle(fontSize: 16, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: List.generate(5, (i) => _buildStar(i + 1)),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Section Input Review
+                  const Text(
+                    'Review',
+                    style: TextStyle(fontSize: 16, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _reviewController,
+                    maxLines: 5,
+                    decoration: InputDecoration(
+                      hintText: 'Keren banget!',
+                      hintStyle: const TextStyle(color: Colors.grey),
+                      contentPadding: const EdgeInsets.all(16),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Colors.grey),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Colors.blue, width: 2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Section Buttons (Sesuai Screenshot)
+                  Row(
+                    children: [
+                      // Tombol Cancel (Selalu ada)
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            side: const BorderSide(color: Colors.grey),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(color: Colors.black54),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+
+                      // Tombol Submit/Update
+                      Expanded(
+                        flex: isUpdateMode ? 1 : 2, // Kalau update, dia bagi ruang sama delete
+                        child: ElevatedButton(
+                          onPressed: _submitReview,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isUpdateMode ? Colors.blue[600] : Colors.green[600],
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            isUpdateMode ? 'Update\nreview' : 'Submit review',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+
+                      // Tombol Delete (Cuma muncul kalau Update Mode)
+                      if (isUpdateMode) ...[
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _deleteReview,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red[500],
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text(
+                              'Delete\nreview',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }
