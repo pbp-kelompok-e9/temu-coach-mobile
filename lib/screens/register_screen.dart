@@ -128,15 +128,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
               height: 28,
               errorBuilder: (context, error, stackTrace) {
                 return const Icon(
-                  Icons.sports_soccer,
+                  Icons.sports,
                   size: 28,
+                  color: Colors.white,
                 );
               },
             ),
             const SizedBox(width: 12),
-            const Text('Register - TemuCoach'),
+            const Text('Register'),
           ],
         ),
+        backgroundColor: const Color(0xFF003E85),
+        foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
@@ -481,7 +484,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Tarif per Sesi (Rp) *',
                         hintText: 'Contoh: 500000',
-                        prefixIcon: Icon(Icons.attach_money),
+                        prefixIcon: Icon(Icons.payments),
+                        prefixText: 'Rp ',
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {

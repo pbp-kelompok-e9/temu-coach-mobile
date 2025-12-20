@@ -60,11 +60,21 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> {
       final s = await coachProvider.fetchSchedules(widget.coachId);
       await reviewProvider.fetchReviewsByCoach(widget.coachId);
       
+      // Filter schedules: only show unbooked schedules from today onwards
+      final today = DateTime.now();
+      final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final availableSchedules = s.where((sch) {
+        // Only show unbooked schedules
+        if (sch.isBooked) return false;
+        // Only show schedules from today onwards
+        return sch.date.compareTo(todayStr) >= 0;
+      }).toList();
+      
       setState(() {
         coach = c;
-        schedules = s;
+        schedules = availableSchedules;
         grouped = {};
-        for (final sch in s) {
+        for (final sch in availableSchedules) {
           grouped.putIfAbsent(sch.date, () => []).add(sch);
         }
         reviews = reviewProvider.coachReviews;
@@ -154,7 +164,28 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(coach?.name ?? 'Coach Detail')),
+      appBar: AppBar(
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/images/logo_whistle.png',
+              width: 28,
+              height: 28,
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.sports, color: Colors.white),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                coach?.name ?? 'Detail',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF003E85),
+        foregroundColor: Colors.white,
+      ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : error != null
@@ -252,7 +283,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> {
                           _buildDetailRow(Icons.sports_soccer, 'Formasi', coach!.prefferedFormation.isNotEmpty ? coach!.prefferedFormation : '-'),
                           _buildDetailRow(Icons.badge, 'Lisensi', coach!.license),
                           _buildDetailRow(Icons.access_time, 'Pengalaman', '${coach!.averageTermAsCoach.toStringAsFixed(1)} Tahun'),
-                          _buildDetailRow(Icons.attach_money, 'Tarif/Sesi', 'Rp ${_formatRupiah(coach!.ratePerSession.toInt())}'),
+                          _buildDetailRow(Icons.payments, 'Tarif/Sesi', _formatRupiah(coach!.ratePerSession.toInt())),
                           const Divider(height: 24),
                           // Description
                           const Align(

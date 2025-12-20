@@ -5,6 +5,7 @@ import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:intl/intl.dart';
 import '../models/chat_message.dart';
 import '../services/chat_service.dart';
+import '../services/connectivity_service.dart';
 import '../widgets/app_drawer.dart';
 import 'chat_room_screen.dart';
 
@@ -15,7 +16,8 @@ class ChatListScreen extends StatefulWidget {
   State<ChatListScreen> createState() => _ChatListScreenState();
 }
 
-class _ChatListScreenState extends State<ChatListScreen> with SingleTickerProviderStateMixin {
+class _ChatListScreenState extends State<ChatListScreen> 
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
   late ChatService _chatService;
   
@@ -23,28 +25,107 @@ class _ChatListScreenState extends State<ChatListScreen> with SingleTickerProvid
   List<ChatContact> _contacts = [];
   bool _isLoadingConversations = true;
   bool _isLoadingContacts = true;
+  String? _errorMessage;
   String _searchQuery = '';
   Timer? _refreshTimer;
+  
+  // Connectivity
+  StreamSubscription<bool>? _connectivitySubscription;
+  bool _isOnline = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    
+    // Register lifecycle observer for app switch handling
+    WidgetsBinding.instance.addObserver(this);
+    
     _initChat();
+    _initConnectivity();
+  }
+
+  void _initConnectivity() {
+    final service = ConnectivityService();
+    _isOnline = service.isConnected;
+    
+    _connectivitySubscription = service.connectivityStream.listen((isConnected) {
+      if (mounted) {
+        final wasOffline = !_isOnline;
+        setState(() => _isOnline = isConnected);
+        
+        if (isConnected && wasOffline) {
+          // Reconnected - refresh data
+          _showSnackBar('Terhubung kembali', Colors.green);
+          _loadData();
+        } else if (!isConnected) {
+          _showSnackBar('Tidak ada koneksi internet', Colors.red);
+        }
+      }
+    });
+  }
+
+  void _showSnackBar(String message, Color color) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                color == Colors.green ? Icons.wifi : Icons.wifi_off,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 12),
+              Text(message),
+            ],
+          ),
+          backgroundColor: color,
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: color == Colors.green ? 2 : 5),
+        ),
+      );
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    switch (state) {
+      case AppLifecycleState.resumed:
+        // App came back to foreground - refresh data
+        _loadData();
+        _startRefreshTimer();
+        break;
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+        // App going to background - stop timer
+        _refreshTimer?.cancel();
+        break;
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        break;
+    }
   }
 
   void _initChat() {
     final request = context.read<CookieRequest>();
     _chatService = ChatService(request);
     _loadData();
-    
-    // Auto-refresh conversations every 5 seconds
+    _startRefreshTimer();
+  }
+
+  void _startRefreshTimer() {
+    _refreshTimer?.cancel();
     _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      _loadConversations(silent: true);
+      if (_isOnline) {
+        _loadConversations(silent: true);
+      }
     });
   }
 
   Future<void> _loadData() async {
+    setState(() => _errorMessage = null);
     await Future.wait([
       _loadConversations(),
       _loadContacts(),
@@ -52,6 +133,14 @@ class _ChatListScreenState extends State<ChatListScreen> with SingleTickerProvid
   }
 
   Future<void> _loadConversations({bool silent = false}) async {
+    if (!_isOnline && !silent) {
+      setState(() {
+        _errorMessage = 'Tidak ada koneksi internet';
+        _isLoadingConversations = false;
+      });
+      return;
+    }
+
     if (!silent && mounted) {
       setState(() => _isLoadingConversations = true);
     }
@@ -62,16 +151,25 @@ class _ChatListScreenState extends State<ChatListScreen> with SingleTickerProvid
         setState(() {
           _conversations = conversations;
           _isLoadingConversations = false;
+          _errorMessage = null;
         });
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoadingConversations = false);
+        setState(() {
+          _isLoadingConversations = false;
+          if (!silent) _errorMessage = 'Gagal memuat percakapan';
+        });
       }
     }
   }
 
   Future<void> _loadContacts() async {
+    if (!_isOnline) {
+      setState(() => _isLoadingContacts = false);
+      return;
+    }
+
     setState(() => _isLoadingContacts = true);
     
     try {
@@ -99,7 +197,6 @@ class _ChatListScreenState extends State<ChatListScreen> with SingleTickerProvid
         ),
       ),
     ).then((_) {
-      // Refresh conversations when returning
       _loadConversations();
     });
   }
@@ -122,15 +219,21 @@ class _ChatListScreenState extends State<ChatListScreen> with SingleTickerProvid
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     _refreshTimer?.cancel();
+    _connectivitySubscription?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
+        backgroundColor: const Color(0xFF003E85),
+        foregroundColor: Colors.white,
+        elevation: 0,
         automaticallyImplyLeading: false,
         leading: Builder(
           builder: (context) => IconButton(
@@ -138,49 +241,179 @@ class _ChatListScreenState extends State<ChatListScreen> with SingleTickerProvid
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
-        title: const Text('Chat'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Percakapan'),
-            Tab(text: 'Kontak'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/images/logo_whistle.png',
+              width: 28,
+              height: 28,
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.sports, color: Colors.white),
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Chat',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ],
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            color: const Color(0xFF003E85),
+            child: TabBar(
+              controller: _tabController,
+              indicatorColor: const Color(0xFFDE3400),
+              indicatorWeight: 3,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+              tabs: const [
+                Tab(text: 'Percakapan'),
+                Tab(text: 'Kontak'),
+              ],
+            ),
+          ),
         ),
       ),
       drawer: const AppDrawer(),
       body: Column(
         children: [
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Cari...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                filled: true,
-                fillColor: Colors.grey[100],
+          // Offline banner
+          if (!_isOnline)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              color: Colors.red[700],
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.wifi_off, color: Colors.white, size: 16),
+                  SizedBox(width: 8),
+                  Text(
+                    'Mode Offline - Data mungkin tidak terbaru',
+                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ],
               ),
-              onChanged: (value) {
-                setState(() => _searchQuery = value);
-              },
+            ),
+          
+          // Header section like website
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Percakapan Anda',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF003E85),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Pilih untuk melanjutkan chat.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Search bar
+                TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Cari nama pengguna...',
+                    prefixIcon: const Icon(Icons.search, color: Color(0xFF003E85)),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              setState(() => _searchQuery = '');
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFB0B0B0), width: 2),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFB0B0B0), width: 2),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFDE3400), width: 2),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  onChanged: (value) {
+                    setState(() => _searchQuery = value);
+                  },
+                ),
+              ],
             ),
           ),
           
+          // Error message
+          if (_errorMessage != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.red[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red[700]),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _errorMessage!,
+                      style: TextStyle(color: Colors.red[700]),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _loadData,
+                    child: const Text('Coba Lagi'),
+                  ),
+                ],
+              ),
+            ),
+          
           // Tab content
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // Conversations tab
-                _buildConversationsTab(),
-                
-                // Contacts tab
-                _buildContactsTab(),
-              ],
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFB0B0B0), width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildConversationsTab(),
+                    _buildContactsTab(),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -190,7 +423,11 @@ class _ChatListScreenState extends State<ChatListScreen> with SingleTickerProvid
 
   Widget _buildConversationsTab() {
     if (_isLoadingConversations) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFFDE3400),
+        ),
+      );
     }
     
     final conversations = _filteredConversations;
@@ -200,19 +437,27 @@ class _ChatListScreenState extends State<ChatListScreen> with SingleTickerProvid
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.chat_bubble_outline,
-              size: 64,
-              color: Colors.grey[400],
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFE5DD),
+                borderRadius: BorderRadius.circular(50),
+              ),
+              child: const Icon(
+                Icons.chat_bubble_outline,
+                size: 48,
+                color: Color(0xFFDE3400),
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Text(
               _searchQuery.isNotEmpty
                   ? 'Tidak ada percakapan yang cocok'
                   : 'Belum ada percakapan',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF003E85),
               ),
             ),
             if (_searchQuery.isEmpty) ...[
@@ -221,7 +466,7 @@ class _ChatListScreenState extends State<ChatListScreen> with SingleTickerProvid
                 'Mulai chat dari tab Kontak',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey[400],
+                  color: Colors.grey[600],
                 ),
               ),
             ],
@@ -232,8 +477,13 @@ class _ChatListScreenState extends State<ChatListScreen> with SingleTickerProvid
     
     return RefreshIndicator(
       onRefresh: _loadConversations,
-      child: ListView.builder(
+      color: const Color(0xFFDE3400),
+      child: ListView.separated(
         itemCount: conversations.length,
+        separatorBuilder: (context, index) => Divider(
+          height: 1,
+          color: Colors.grey[200],
+        ),
         itemBuilder: (context, index) {
           final conversation = conversations[index];
           return _buildConversationTile(conversation);
@@ -247,105 +497,168 @@ class _ChatListScreenState extends State<ChatListScreen> with SingleTickerProvid
         ? _formatMessageTime(conversation.lastMessageTime!)
         : '';
     
-    return ListTile(
-      leading: Stack(
-        children: [
-          CircleAvatar(
-            backgroundColor: _getAvatarColor(conversation.partnerType),
-            child: Text(
-              conversation.partnerName.isNotEmpty
-                  ? conversation.partnerName[0].toUpperCase()
-                  : '?',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          if (conversation.unreadCount > 0)
-            Positioned(
-              right: 0,
-              top: 0,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-                constraints: const BoxConstraints(
-                  minWidth: 18,
-                  minHeight: 18,
-                ),
-                child: Text(
-                  conversation.unreadCount > 9 
-                      ? '9+' 
-                      : conversation.unreadCount.toString(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-        ],
-      ),
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              conversation.partnerName,
-              style: TextStyle(
-                fontWeight: conversation.unreadCount > 0 
-                    ? FontWeight.bold 
-                    : FontWeight.normal,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          Text(
-            timeString,
-            style: TextStyle(
-              fontSize: 12,
-              color: conversation.unreadCount > 0 
-                  ? Theme.of(context).colorScheme.primary 
-                  : Colors.grey,
-            ),
-          ),
-        ],
-      ),
-      subtitle: Row(
-        children: [
-          _buildUserTypeChip(conversation.partnerType),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              conversation.lastMessage,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: conversation.unreadCount > 0 
-                    ? Colors.black87 
-                    : Colors.grey,
-                fontWeight: conversation.unreadCount > 0 
-                    ? FontWeight.w500 
-                    : FontWeight.normal,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return InkWell(
       onTap: () => _openChatRoom(
         conversation.partnerId,
         conversation.partnerName,
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        color: conversation.unreadCount > 0 
+            ? const Color(0xFFFFF5F2) 
+            : Colors.white,
+        child: Row(
+          children: [
+            // Avatar
+            Stack(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: conversation.partnerType.toLowerCase() == 'coach'
+                          ? [const Color(0xFFDE3400), const Color(0xFFFF6B3D)]
+                          : [const Color(0xFF003E85), const Color(0xFF0066CC)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (conversation.partnerType.toLowerCase() == 'coach'
+                                ? const Color(0xFFDE3400)
+                                : const Color(0xFF003E85))
+                            .withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      conversation.partnerName.isNotEmpty
+                          ? conversation.partnerName[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                      ),
+                    ),
+                  ),
+                ),
+                if (conversation.unreadCount > 0)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 22,
+                        minHeight: 22,
+                      ),
+                      child: Text(
+                        conversation.unreadCount > 9 
+                            ? '9+' 
+                            : conversation.unreadCount.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 14),
+            
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          conversation.partnerName,
+                          style: TextStyle(
+                            fontWeight: conversation.unreadCount > 0 
+                                ? FontWeight.bold 
+                                : FontWeight.w600,
+                            fontSize: 16,
+                            color: const Color(0xFF003E85),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        timeString,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: conversation.unreadCount > 0 
+                              ? const Color(0xFFDE3400) 
+                              : Colors.grey[500],
+                          fontWeight: conversation.unreadCount > 0 
+                              ? FontWeight.bold 
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      _buildUserTypeChip(conversation.partnerType),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          conversation.lastMessage,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: conversation.unreadCount > 0 
+                                ? Colors.black87 
+                                : Colors.grey[600],
+                            fontWeight: conversation.unreadCount > 0 
+                                ? FontWeight.w500 
+                                : FontWeight.normal,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            
+            // Arrow
+            Icon(
+              Icons.chevron_right,
+              color: Colors.grey[400],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildContactsTab() {
     if (_isLoadingContacts) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFFDE3400),
+        ),
+      );
     }
     
     final contacts = _filteredContacts;
@@ -355,19 +668,27 @@ class _ChatListScreenState extends State<ChatListScreen> with SingleTickerProvid
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.people_outline,
-              size: 64,
-              color: Colors.grey[400],
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F4FF),
+                borderRadius: BorderRadius.circular(50),
+              ),
+              child: const Icon(
+                Icons.people_outline,
+                size: 48,
+                color: Color(0xFF003E85),
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Text(
               _searchQuery.isNotEmpty
                   ? 'Tidak ada kontak yang cocok'
                   : 'Belum ada kontak',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF003E85),
               ),
             ),
           ],
@@ -377,8 +698,13 @@ class _ChatListScreenState extends State<ChatListScreen> with SingleTickerProvid
     
     return RefreshIndicator(
       onRefresh: _loadContacts,
-      child: ListView.builder(
+      color: const Color(0xFFDE3400),
+      child: ListView.separated(
         itemCount: contacts.length,
+        separatorBuilder: (context, index) => Divider(
+          height: 1,
+          color: Colors.grey[200],
+        ),
         itemBuilder: (context, index) {
           final contact = contacts[index];
           return _buildContactTile(contact);
@@ -388,83 +714,125 @@ class _ChatListScreenState extends State<ChatListScreen> with SingleTickerProvid
   }
 
   Widget _buildContactTile(ChatContact contact) {
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: _getAvatarColor(contact.userType),
-        child: Text(
-          contact.name.isNotEmpty ? contact.name[0].toUpperCase() : '?',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-      title: Text(contact.name),
-      subtitle: Row(
-        children: [
-          _buildUserTypeChip(contact.userType),
-          const SizedBox(width: 8),
-          Text(
-            '@${contact.username}',
-            style: TextStyle(color: Colors.grey[600]),
-          ),
-        ],
-      ),
-      trailing: IconButton(
-        icon: Icon(
-          Icons.chat,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-        onPressed: () => _openChatRoom(contact.id, contact.name),
-      ),
+    return InkWell(
       onTap: () => _openChatRoom(contact.id, contact.name),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            // Avatar
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: contact.userType.toLowerCase() == 'coach'
+                      ? [const Color(0xFFDE3400), const Color(0xFFFF6B3D)]
+                      : [const Color(0xFF003E85), const Color(0xFF0066CC)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(28),
+              ),
+              child: Center(
+                child: Text(
+                  contact.name.isNotEmpty ? contact.name[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    contact.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: Color(0xFF003E85),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      _buildUserTypeChip(contact.userType),
+                      const SizedBox(width: 8),
+                      Text(
+                        '@${contact.username}',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            
+            // Chat button
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFDE3400),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.chat, color: Colors.white, size: 20),
+                onPressed: () => _openChatRoom(contact.id, contact.name),
+                tooltip: 'Mulai Chat',
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildUserTypeChip(String userType) {
     String label;
-    Color color;
+    Color bgColor;
+    Color textColor;
     
     switch (userType.toLowerCase()) {
       case 'coach':
         label = 'Coach';
-        color = Colors.blue;
+        bgColor = const Color(0xFFFFE5DD);
+        textColor = const Color(0xFFDE3400);
         break;
       case 'customer':
         label = 'Customer';
-        color = Colors.green;
+        bgColor = const Color(0xFFE8F4FF);
+        textColor = const Color(0xFF003E85);
         break;
       default:
         label = userType;
-        color = Colors.grey;
+        bgColor = Colors.grey[100]!;
+        textColor = Colors.grey[700]!;
     }
     
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(4),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 10,
-          color: color,
-          fontWeight: FontWeight.w500,
+          fontSize: 11,
+          color: textColor,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
-  }
-
-  Color _getAvatarColor(String userType) {
-    switch (userType.toLowerCase()) {
-      case 'coach':
-        return Colors.blue;
-      case 'customer':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
   }
 
   String _formatMessageTime(DateTime time) {
@@ -478,7 +846,6 @@ class _ChatListScreenState extends State<ChatListScreen> with SingleTickerProvid
     } else if (messageDate == yesterday) {
       return 'Kemarin';
     } else if (now.difference(time).inDays < 7) {
-      // Within a week, show day name
       final days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
       return days[time.weekday - 1];
     } else {
