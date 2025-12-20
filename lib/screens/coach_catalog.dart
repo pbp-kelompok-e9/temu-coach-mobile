@@ -85,7 +85,19 @@ class _CoachCatalogScreenState extends State<CoachCatalogScreen> {
       backgroundColor: AppColors.gray100,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        title: const Text('Katalog Pelatih'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/images/logo_whistle.png',
+              width: 28,
+              height: 28,
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.sports, color: Colors.white),
+            ),
+            const SizedBox(width: 8),
+            const Text('TemuCoach'),
+          ],
+        ),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
@@ -280,19 +292,21 @@ class _CoachCatalogScreenState extends State<CoachCatalogScreen> {
                                                 ),
                                               ),
                                               const SizedBox(width: 16),
-                                              const Icon(
-                                                Icons.attach_money,
-                                                size: 16,
-                                                color: Colors.green,
-                                              ),
-                                              Text(
-                                                _formatRupiah(
-                                                  coach.ratePerSession.toInt(),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.green.withOpacity(0.1),
+                                                  borderRadius: BorderRadius.circular(4),
                                                 ),
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w500,
-                                                  color: Colors.green,
+                                                child: Text(
+                                                  _formatRupiah(
+                                                    coach.ratePerSession.toInt(),
+                                                  ),
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.green,
+                                                  ),
                                                 ),
                                               ),
                                             ],

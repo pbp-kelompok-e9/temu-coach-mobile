@@ -30,7 +30,21 @@ class _AdminScreenState extends State<AdminScreen> {
     return Scaffold(
       drawer: const AppDrawer(),
       appBar: AppBar(
-        title: const Text("Admin Dashboard - TemuCoach"),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/images/logo_whistle.png',
+              width: 28,
+              height: 28,
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.sports, color: Colors.white),
+            ),
+            const SizedBox(width: 8),
+            const Text('Admin'),
+          ],
+        ),
+        backgroundColor: const Color(0xFF003E85),
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
