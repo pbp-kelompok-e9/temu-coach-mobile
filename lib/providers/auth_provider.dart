@@ -14,7 +14,7 @@ class AuthProvider with ChangeNotifier {
   AuthProvider(this._request) {
     _authService = AuthService(_request);
   }
-
+  CookieRequest get request => _request;
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
