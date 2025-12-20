@@ -14,13 +14,14 @@ class AuthProvider with ChangeNotifier {
   AuthProvider(this._request) {
     _authService = AuthService(_request);
   }
-
+  CookieRequest get request => _request;
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  bool get isLoggedIn => _authService.isLoggedIn && _user != null;
+  bool get isLoggedIn => _request.loggedIn && _user != null;
   bool get isCoach => _user?.isCoach ?? false;
-  bool get isCustomer => _user?.isCustomer ?? true;
+  bool get isCustomer => _user?.isCustomer ?? false;
+  bool get isAdmin => _user?.isAdmin ?? false;
 
   void _setLoading(bool value) {
     _isLoading = value;
@@ -109,10 +110,11 @@ class AuthProvider with ChangeNotifier {
     String? firstName,
     String? lastName,
     required int age,
-    required int experienceYears,
-    required String expertise,
-    required String certifications,
-    required String location,
+    required String citizenship,
+    required String club,
+    required String license,
+    required String prefferedFormation,
+    required double averageTermAsCoach,
     required int ratePerSession,
     String? description,
   }) async {
@@ -128,10 +130,11 @@ class AuthProvider with ChangeNotifier {
         firstName: firstName,
         lastName: lastName,
         age: age,
-        experienceYears: experienceYears,
-        expertise: expertise,
-        certifications: certifications,
-        location: location,
+        citizenship: citizenship,
+        club: club,
+        license: license,
+        prefferedFormation: prefferedFormation,
+        averageTermAsCoach: averageTermAsCoach,
         ratePerSession: ratePerSession,
         description: description,
       );

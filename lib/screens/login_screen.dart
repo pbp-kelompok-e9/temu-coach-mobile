@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
+import 'admin_screen.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import 'register_screen.dart';
-import 'coach_catalog.dart';
+import 'coach_dashboard.dart';
+import '../providers/customer_provider.dart';
+import 'customer_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -38,12 +42,30 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (success) {
-      // Navigate to home/catalog
+      final user = authProvider.user!;
+
+      if (user.isAdmin) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const AdminScreen()),
+        );
+      } else if (user.isCoach) {  
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const CoachCatalogScreen()),
+        MaterialPageRoute(builder: (_) => const CoachDashboardPage()),
       );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (ctx) => ChangeNotifierProvider(
+              create: (_) => CustomerDashboardProvider(
+                ctx.read<CookieRequest>(),
+              )..fetchMyBookings(),
+              child: const CustomerDashboardPage(),
+            ),
+          ),
+        );
+      }
     } else {
-      // Show error
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.errorMessage ?? 'Login gagal'),
