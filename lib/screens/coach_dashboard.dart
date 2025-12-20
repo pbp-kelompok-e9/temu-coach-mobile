@@ -35,7 +35,6 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
   Future<void> fetchDashboardData() async {
   final request = context.read<CookieRequest>();
   
-  // Cek login dulu
   if (!request.loggedIn) {
     _redirectToLogin();
     return;
@@ -107,7 +106,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
         ),
       );
       
-      // Jika error unauthorized, redirect ke login
+
       if (e.toString().contains('unauthorized') || 
           e.toString().contains('Login required')) {
         _redirectToLogin();
@@ -162,8 +161,8 @@ void _showPendingDialog(Map<String, dynamic> response) {
       actions: [
         TextButton(
           onPressed: () {
-            Navigator.pop(context); // Close dialog
-            Navigator.pop(context); // Back to previous page
+            Navigator.pop(context); 
+            Navigator.pop(context); 
           },
           child: const Text('OK'),
         ),
@@ -215,7 +214,7 @@ void _showPendingDialog(Map<String, dynamic> response) {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Date Picker
+              
               const Text('Tanggal', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               InkWell(
@@ -432,111 +431,180 @@ void _showPendingDialog(Map<String, dynamic> response) {
   }
 
   void showEditProfileModal() {
-    final nameController = TextEditingController(text: coachData?['name'] ?? '');
-    final ageController = TextEditingController(text: coachData?['age']?.toString() ?? '');
-    final citizenshipController = TextEditingController(text: coachData?['citizenship'] ?? '');
-    final clubController = TextEditingController(text: coachData?['club'] ?? '');
-    final licenseController = TextEditingController(text: coachData?['license'] ?? '');
-    final formationController = TextEditingController(text: coachData?['preffered_formation'] ?? '');
-    final avgTermController = TextEditingController(text: coachData?['average_term_as_coach']?.toString() ?? '');
-    final rateController = TextEditingController(text: coachData?['rate_per_session']?.toString() ?? '');
-    final descriptionController = TextEditingController(text: coachData?['description'] ?? '');
+  final nameController = TextEditingController(text: coachData?['name'] ?? '');
+  final ageController = TextEditingController(text: coachData?['age']?.toString() ?? '');
+  final citizenshipController = TextEditingController(text: coachData?['citizenship'] ?? '');
+  final clubController = TextEditingController(text: coachData?['club'] ?? '');
+  final licenseController = TextEditingController(text: coachData?['license'] ?? '');
+  final formationController = TextEditingController(text: coachData?['preffered_formation'] ?? '');
+  final avgTermController = TextEditingController(text: coachData?['average_term_as_coach']?.toString() ?? '');
+  final rateController = TextEditingController(text: coachData?['rate_per_session']?.toString() ?? '');
+  final descriptionController = TextEditingController(text: coachData?['description'] ?? '');
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Profile'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircleAvatar(
-                radius: 50,
-                backgroundImage: coachData?['foto'] != null
-                    ? NetworkImage('$baseUrl${coachData!['foto']}')
-                    : null,
-                child: coachData?['foto'] == null
-                    ? const Icon(Icons.camera_alt, size: 40)
-                    : null,
-              ),
-              if (kIsWeb)
-                const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Text(
-                    'Upload foto tidak tersedia di web',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Edit Profile'),
+      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            
+            CircleAvatar(
+              radius: 50,
+              backgroundImage: coachData?['foto'] != null
+                  ? NetworkImage('$baseUrl${coachData!['foto']}')
+                  : null,
+              child: coachData?['foto'] == null
+                  ? const Icon(Icons.camera_alt, size: 40)
+                  : null,
+            ),
+            if (kIsWeb)
+              const Padding(
+                padding: EdgeInsets.only(top: 8.0),
+                child: Text(
+                  'Upload foto tidak tersedia di web',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
               ),
-              TextField(
-                controller: ageController,
-                decoration: const InputDecoration(labelText: 'Age'),
-                keyboardType: TextInputType.number,
+            const SizedBox(height: 24),
+            
+            
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Name',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
               ),
-              TextField(
-                controller: citizenshipController,
-                decoration: const InputDecoration(labelText: 'Citizenship'),
+            ),
+            const SizedBox(height: 16),
+            
+            TextField(
+              controller: ageController,
+              decoration: const InputDecoration(
+                labelText: 'Age',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
               ),
-              TextField(
-                controller: clubController,
-                decoration: const InputDecoration(labelText: 'Club'),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            
+            
+            TextField(
+              controller: citizenshipController,
+              decoration: const InputDecoration(
+                labelText: 'Citizenship',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
               ),
-              TextField(
-                controller: licenseController,
-                decoration: const InputDecoration(labelText: 'License'),
+            ),
+            const SizedBox(height: 16),
+            
+            
+            TextField(
+              controller: clubController,
+              decoration: const InputDecoration(
+                labelText: 'Club',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
               ),
-              TextField(
-                controller: formationController,
-                decoration: const InputDecoration(labelText: 'Preferred Formation'),
+            ),
+            const SizedBox(height: 16),
+            
+           
+            TextField(
+              controller: licenseController,
+              decoration: const InputDecoration(
+                labelText: 'License',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
               ),
-              TextField(
-                controller: avgTermController,
-                decoration: const InputDecoration(labelText: 'Average Term (Years)'),
-                keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            
+            
+            TextField(
+              controller: formationController,
+              decoration: const InputDecoration(
+                labelText: 'Preferred Formation',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
               ),
-              TextField(
-                controller: rateController,
-                decoration: const InputDecoration(labelText: 'Rate per Session'),
-                keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            
+            
+            TextField(
+              controller: avgTermController,
+              decoration: const InputDecoration(
+                labelText: 'Average Term (Years)',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
               ),
-              TextField(
-                controller: descriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
-                maxLines: 3,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            
+            
+            TextField(
+              controller: rateController,
+              decoration: const InputDecoration(
+                labelText: 'Rate per Session',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
               ),
-            ],
-          ),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            
+            
+            TextField(
+              controller: descriptionController,
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                alignLabelWithHint: true,
+              ),
+              maxLines: 4,
+            ),
+            const SizedBox(height: 8),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await updateProfile(
-                name: nameController.text,
-                age: ageController.text,
-                citizenship: citizenshipController.text,
-                club: clubController.text,
-                license: licenseController.text,
-                formation: formationController.text,
-                avgTerm: avgTermController.text,
-                rate: rateController.text,
-                description: descriptionController.text,
-              );
-              if (mounted) Navigator.pop(context);
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
       ),
-    );
-  }
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Batal'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            await updateProfile(
+              name: nameController.text,
+              age: ageController.text,
+              citizenship: citizenshipController.text,
+              club: clubController.text,
+              license: licenseController.text,
+              formation: formationController.text,
+              avgTerm: avgTermController.text,
+              rate: rateController.text,
+              description: descriptionController.text,
+            );
+            if (mounted) Navigator.pop(context);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue[900],
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Simpan'),
+        ),
+      ],
+    ),
+  );
+}
 
   Future<void> updateProfile({
     required String name,
