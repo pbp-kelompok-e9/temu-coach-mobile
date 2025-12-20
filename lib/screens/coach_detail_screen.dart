@@ -39,8 +39,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> {
   bool isBooking = false;
   DateTime _displayMonth = DateTime.now();
 
-  // --- STATE FILTER BARU ---
-  int _selectedFilterRating = 0; // 0 = Tampilkan Semua
+  int _selectedFilterRating = 0;
 
   @override
   void initState() {
@@ -68,7 +67,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> {
       final s = await coachProvider.fetchSchedules(widget.coachId);
       await reviewProvider.fetchReviewsByCoach(widget.coachId);
       
-      // Filter jadwal (kode lama)
+      // Filter jadwal
       final today = DateTime.now();
       final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
       final availableSchedules = s.where((sch) {
@@ -170,7 +169,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // --- Card Profile (Kode Lama) ---
+                  // --- Card Profile ---
                   Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -252,9 +251,9 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> {
                   
                   const SizedBox(height: 24),
                   
-                  // --- REVIEWS SECTION (MODIFIED) ---
+                 
                   _buildReviewsSection(),
-                  // Padding bawah biar ga mepet
+                  
                   const SizedBox(height: 40),
                 ],
               ),
@@ -262,9 +261,9 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> {
     );
   }
 
-  // --- WIDGET FILTER CHIPS BARU ---
+
   Widget _buildFilterChips() {
-    // List opsi filter: 0 (Semua), 5, 4, 3, 2, 1
+  
     final filters = [0, 5, 4, 3, 2, 1];
 
     return SingleChildScrollView(
@@ -305,8 +304,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> {
   }
 
   Widget _buildReviewsSection() {
-    // 1. FILTERING LOGIC
-    // Kalau 0 ambil semua, kalau bukan 0 ambil yang ratenya sama
+  
     final displayedReviews = _selectedFilterRating == 0
         ? allReviews
         : allReviews.where((r) => r.rate == _selectedFilterRating).toList();
@@ -319,7 +317,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Reviews (${allReviews.length})', // Total asli
+              'Reviews (${allReviews.length})',
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -342,13 +340,11 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> {
         
         const SizedBox(height: 12),
 
-        // 2. MASUKKAN FILTER CHIPS DISINI
         if (allReviews.isNotEmpty) ...[
            _buildFilterChips(),
            const SizedBox(height: 16),
         ],
 
-        // 3. TAMPILKAN LIST HASIL FILTER
         if (allReviews.isEmpty)
           Container(
             width: double.infinity,
@@ -434,7 +430,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> {
     );
   }
 
-  // Helper Widgets (Sama kayak sebelumnya)
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),

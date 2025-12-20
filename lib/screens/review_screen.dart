@@ -53,7 +53,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
     if (_rating == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mohon beri rating bintang ⭐'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Mohon beri rating bintang'), backgroundColor: Colors.red),
       );
       return;
     }
@@ -108,7 +108,6 @@ class _ReviewScreenState extends State<ReviewScreen> {
     }
   }
 
-  // Widget Bintang Custom
   Widget _buildStar(int index) {
     return GestureDetector(
       onTap: () {
