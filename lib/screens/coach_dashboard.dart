@@ -201,39 +201,133 @@ void _showPendingDialog(Map<String, dynamic> response) {
   }
 
   void showAddScheduleModal() {
-    final tanggalController = TextEditingController();
-    final jamMulaiController = TextEditingController();
-    final jamSelesaiController = TextEditingController();
+  DateTime? selectedDate;
+  TimeOfDay? selectedStartTime;
+  TimeOfDay? selectedEndTime;
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
+  showDialog(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
         title: const Text('Tambahkan Jadwal'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextField(
-                controller: tanggalController,
-                decoration: const InputDecoration(
-                  labelText: 'Tanggal (YYYY-MM-DD)',
-                  hintText: '2025-12-31',
+              // Date Picker
+              const Text('Tanggal', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () async {
+                  final DateTime? picked = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                  );
+                  if (picked != null) {
+                    setState(() {
+                      selectedDate = picked;
+                    });
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        selectedDate != null
+                            ? '${selectedDate!.year}-${selectedDate!.month.toString().padLeft(2, '0')}-${selectedDate!.day.toString().padLeft(2, '0')}'
+                            : 'Pilih tanggal',
+                        style: TextStyle(
+                          color: selectedDate != null ? Colors.black : Colors.grey[600],
+                        ),
+                      ),
+                      const Icon(Icons.calendar_today, size: 20),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: jamMulaiController,
-                decoration: const InputDecoration(
-                  labelText: 'Jam Mulai (HH:MM)',
-                  hintText: '14:00',
+              
+              const Text('Jam Mulai', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () async {
+                  final TimeOfDay? picked = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.now(),
+                  );
+                  if (picked != null) {
+                    setState(() {
+                      selectedStartTime = picked;
+                    });
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        selectedStartTime != null
+                            ? '${selectedStartTime!.hour.toString().padLeft(2, '0')}:${selectedStartTime!.minute.toString().padLeft(2, '0')}'
+                            : 'Pilih jam mulai',
+                        style: TextStyle(
+                          color: selectedStartTime != null ? Colors.black : Colors.grey[600],
+                        ),
+                      ),
+                      const Icon(Icons.access_time, size: 20),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: jamSelesaiController,
-                decoration: const InputDecoration(
-                  labelText: 'Jam Selesai (HH:MM)',
-                  hintText: '17:00',
+              
+              const Text('Jam Selesai', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () async {
+                  final TimeOfDay? picked = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.now(),
+                  );
+                  if (picked != null) {
+                    setState(() {
+                      selectedEndTime = picked;
+                    });
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        selectedEndTime != null
+                            ? '${selectedEndTime!.hour.toString().padLeft(2, '0')}:${selectedEndTime!.minute.toString().padLeft(2, '0')}'
+                            : 'Pilih jam selesai',
+                        style: TextStyle(
+                          color: selectedEndTime != null ? Colors.black : Colors.grey[600],
+                        ),
+                      ),
+                      const Icon(Icons.access_time, size: 20),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -246,51 +340,64 @@ void _showPendingDialog(Map<String, dynamic> response) {
           ),
           ElevatedButton(
             onPressed: () async {
-              // Validasi jam_selesai > jam_mulai
-              final jamMulai = jamMulaiController.text;
-              final jamSelesai = jamSelesaiController.text;
               
-              if (jamMulai.isNotEmpty && jamSelesai.isNotEmpty) {
-                try {
-                  final mulaiParts = jamMulai.split(':');
-                  final selesaiParts = jamSelesai.split(':');
-                  
-                  final mulaiMinutes = int.parse(mulaiParts[0]) * 60 + int.parse(mulaiParts[1]);
-                  final selesaiMinutes = int.parse(selesaiParts[0]) * 60 + int.parse(selesaiParts[1]);
-                  
-                  if (selesaiMinutes <= mulaiMinutes) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Jam selesai harus lebih besar dari jam mulai'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                    return;
-                  }
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Format jam tidak valid (gunakan HH:MM)'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                  return;
-                }
+              if (selectedDate == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Silakan pilih tanggal'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
               }
               
-              await addSchedule(
-                tanggalController.text,
-                jamMulaiController.text,
-                jamSelesaiController.text,
-              );
-              if (mounted) Navigator.pop(context);
+              if (selectedStartTime == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Silakan pilih jam mulai'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+              
+              if (selectedEndTime == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Silakan pilih jam selesai'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+              
+              final startMinutes = selectedStartTime!.hour * 60 + selectedStartTime!.minute;
+              final endMinutes = selectedEndTime!.hour * 60 + selectedEndTime!.minute;
+              
+              if (endMinutes <= startMinutes) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Jam selesai harus lebih besar dari jam mulai'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+              
+              final tanggal = '${selectedDate!.year}-${selectedDate!.month.toString().padLeft(2, '0')}-${selectedDate!.day.toString().padLeft(2, '0')}';
+              final jamMulai = '${selectedStartTime!.hour.toString().padLeft(2, '0')}:${selectedStartTime!.minute.toString().padLeft(2, '0')}';
+              final jamSelesai = '${selectedEndTime!.hour.toString().padLeft(2, '0')}:${selectedEndTime!.minute.toString().padLeft(2, '0')}';
+              
+              await addSchedule(tanggal, jamMulai, jamSelesai);
+              if (context.mounted) Navigator.pop(context);
             },
             child: const Text('Simpan'),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Future<void> addSchedule(String tanggal, String jamMulai, String jamSelesai) async {
     final request = context.read<CookieRequest>();
