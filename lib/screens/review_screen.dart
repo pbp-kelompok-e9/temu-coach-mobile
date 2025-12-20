@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/review_provider.dart';
+import '../providers/review_provider.dart'; // Sesuaikan path import provider kamu
 
 class ReviewScreen extends StatefulWidget {
   final int bookingId;
@@ -14,21 +14,33 @@ class ReviewScreen extends StatefulWidget {
 class _ReviewScreenState extends State<ReviewScreen> {
   int _rating = 0;
   final TextEditingController _reviewController = TextEditingController();
+  bool _isInitialLoading = true;
 
   @override
   void initState() {
     super.initState();
+    // Jalanin pengecekan setelah frame pertama dirender
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadReviewData();
+    });
+  }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final provider = context.read<ReviewProvider>();
-      await provider.checkReviewForBooking(widget.bookingId);
+  Future<void> _loadReviewData() async {
+    final provider = context.read<ReviewProvider>();
+    
+    // 1. Cek ke backend
+    await provider.checkReviewForBooking(widget.bookingId);
 
-      if (provider.hasReviewed && provider.userReview != null) {
-        setState(() {
-          _rating = provider.userReview!.rate;
-          _reviewController.text = provider.userReview!.review ?? '';
-        });
-      }
+    // 2. Kalau data ditemukan (User mau edit), isi form dengan data lama
+    if (provider.hasReviewed && provider.userReview != null) {
+      setState(() {
+        _rating = provider.userReview!.rate;
+        _reviewController.text = provider.userReview!.review ?? '';
+      });
+    }
+
+    setState(() {
+      _isInitialLoading = false;
     });
   }
 
@@ -38,42 +50,32 @@ class _ReviewScreenState extends State<ReviewScreen> {
     super.dispose();
   }
 
-  Widget _buildStar(int index) {
-    return IconButton(
-      icon: Icon(
-        index <= _rating ? Icons.star : Icons.star_border,
-        color: Colors.amber,
-        size: 32,
-      ),
-      onPressed: () {
-        setState(() {
-          _rating = index;
-        });
-      },
-    );
-  }
-
+  // --- Logic Submit (Create / Update) ---
   Future<void> _submitReview() async {
     final provider = context.read<ReviewProvider>();
 
+    // Validasi sederhana
     if (_rating == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Rating tidak boleh kosong')),
+        const SnackBar(
+          content: Text('Mohon beri rating bintang ⭐'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
 
-    bool success = await provider.createReview(
-      widget.bookingId,
-      _rating,
-      _reviewController.text,
-    );
-    if (!success) {
-      print('Error saat create review: ${provider.error}');
-    }
+    bool success;
+    
+    // Cek apakah mode UPDATE atau CREATE
     if (provider.hasReviewed) {
-      success = await provider.updateReview(_rating, _reviewController.text);
+      // Mode UPDATE
+      success = await provider.updateReview(
+        _rating,
+        _reviewController.text,
+      );
     } else {
+      // Mode CREATE
       success = await provider.createReview(
         widget.bookingId,
         _rating,
@@ -81,47 +83,52 @@ class _ReviewScreenState extends State<ReviewScreen> {
       );
     }
 
-    if (success && mounted) {
+    if (!mounted) return;
+
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            provider.hasReviewed
-                ? 'Review berhasil diupdate!'
-                : 'Review berhasil ditambahkan!',
-          ),
+          content: Text(provider.hasReviewed 
+            ? 'Review berhasil diperbarui!' 
+            : 'Review berhasil dikirim!'),
+          backgroundColor: Colors.green,
         ),
       );
-      Navigator.pop(context, true);
+      Navigator.pop(context, true); // Balik dan kasih sinyal success
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Gagal menyimpan review')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(provider.error ?? 'Gagal menyimpan review'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
+  // --- Logic Delete ---
   Future<void> _deleteReview() async {
-    final provider = context.read<ReviewProvider>();
-
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Hapus Review'),
-        content: const Text('Apakah Anda yakin ingin menghapus review ini?'),
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Review?'),
+        content: const Text('Apakah Anda yakin ingin menghapus ulasan ini?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Batal'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Hapus', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
 
-    if (confirm == true) {
+    if (confirm == true && mounted) {
+      final provider = context.read<ReviewProvider>();
       final success = await provider.deleteReview();
+
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Review berhasil dihapus')),
@@ -131,28 +138,28 @@ class _ReviewScreenState extends State<ReviewScreen> {
     }
   }
 
+  // --- Widget Bintang ---
+  Widget _buildStar(int index) {
+    return IconButton(
+      icon: Icon(
+        index <= _rating ? Icons.star : Icons.star_border,
+        color: Colors.amber,
+        size: 40,
+      ),
+      onPressed: () {
+        setState(() {
+          _rating = index;
+        });
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ReviewProvider>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              'assets/images/logo_whistle.png',
-              width: 28,
-              height: 28,
-              errorBuilder: (context, error, stackTrace) => const Icon(Icons.sports, color: Colors.white),
-            ),
-            const SizedBox(width: 8),
-            const Text('Review'),
-          ],
-        ),
-        backgroundColor: const Color(0xFF003E85),
-        foregroundColor: Colors.white,
-      ),
+      appBar: AppBar(title: const Text('Review Sesi')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
