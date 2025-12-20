@@ -1,8 +1,7 @@
 import 'package:pbp_django_auth/pbp_django_auth.dart';
-import 'auth_service.dart';
 
 class ReportService {
-  static const String baseUrl = 'http://localhost:8000';
+  static const baseUrl = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id';
   final CookieRequest request;
 
   ReportService(this.request);
@@ -18,10 +17,6 @@ class ReportService {
         'reason': reason,
       },
     );
-
-    print('SENDING REPORT...');
-    print('coachId: $coachId');
-    print('reason: $reason');
 
     return response['status'] == true;
   }
