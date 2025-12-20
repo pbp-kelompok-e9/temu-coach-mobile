@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../models/schedule_model.dart';
 
 class CalendarWidget extends StatelessWidget {
   final DateTime displayMonth;
-  final Map<String, dynamic> grouped;
+  final Map<String, List<Schedule>> grouped;
   final String? selectedDate;
   final Function(String) onDateSelected;
   final VoidCallback onPrevMonth;
@@ -83,11 +84,14 @@ class CalendarWidget extends StatelessWidget {
     final startWeekday = first.weekday;
 
     final available = <int>{};
-    grouped.forEach((dateStr, list) {
+    grouped.forEach((dateStr, scheduleList) {
       try {
         final dt = DateTime.parse(dateStr);
         if (dt.year == displayMonth.year && dt.month == displayMonth.month) {
-          available.add(dt.day);
+          final hasAvailable = scheduleList.any((schedule) => !schedule.isBooked);
+          if (hasAvailable) {
+            available.add(dt.day);
+          }
         }
       } catch (_) {}
     });

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:temu_coach_mobile/providers/auth_provider.dart';
+import 'package:temu_coach_mobile/services/report_service.dart';
 import '../providers/customer_provider.dart';
 import '../models/booking_model.dart';
 import '../widgets/app_drawer.dart';
@@ -49,10 +51,8 @@ class CustomerDashboardPage extends StatelessWidget {
                   _emptyText('Belum ada janji temu mendatang')
                 else
                   ...provider.upcomingBookings.map(
-                    (booking) => _BookingCard(
-                      booking: booking,
-                      isUpcoming: true,
-                    ),
+                    (booking) =>
+                        _BookingCard(booking: booking, isUpcoming: true),
                   ),
 
                 const SizedBox(height: 24),
@@ -63,10 +63,8 @@ class CustomerDashboardPage extends StatelessWidget {
                   _emptyText('Belum ada janji temu yang selesai')
                 else
                   ...provider.completedBookings.map(
-                    (booking) => _BookingCard(
-                      booking: booking,
-                      isUpcoming: false,
-                    ),
+                    (booking) =>
+                        _BookingCard(booking: booking, isUpcoming: false),
                   ),
               ],
             ),
@@ -95,10 +93,7 @@ class CustomerDashboardPage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Text(
         text,
-        style: const TextStyle(
-          fontStyle: FontStyle.italic,
-          color: Colors.grey,
-        ),
+        style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
       ),
     );
   }
@@ -108,10 +103,7 @@ class _BookingCard extends StatelessWidget {
   final Booking booking;
   final bool isUpcoming;
 
-  const _BookingCard({
-    required this.booking,
-    required this.isUpcoming,
-  });
+  const _BookingCard({required this.booking, required this.isUpcoming});
 
   void _showEditNotesDialog(BuildContext context) {
     final provider = context.read<CustomerDashboardProvider>();
@@ -219,10 +211,7 @@ class _BookingCard extends StatelessWidget {
         children: [
           Text(
             booking.coachName,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
 
           const SizedBox(height: 4),
@@ -267,21 +256,83 @@ class _BookingCard extends StatelessWidget {
             ),
 
           if (!isUpcoming)
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {
-                  Navigator.pushNamed(
-                    context,
-                    '/review',
-                    arguments: booking.id,
-                  );
-                },
-                child: const Text('Beri Review'),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/review',
+                      arguments: booking.id,
+                    );
+                  },
+                  child: const Text('Beri Review'),
+                ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: () {
+                    _showReportDialog(context, booking.coachId);
+                  },
+                  icon: const Icon(Icons.flag, color: Colors.red),
+                  label: const Text(
+                    'Laporkan',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+              ],
             ),
         ],
       ),
     );
   }
+
+  void _showReportDialog(BuildContext context, int coachId) {
+    final controller = TextEditingController();
+    final request = context.read<AuthProvider>().request;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Laporkan Coach'),
+        content: TextField(
+          controller: controller,
+          maxLines: 4,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (controller.text.trim().isEmpty) return;
+
+              final reportService = ReportService(request);
+
+              final success = await reportService.createReport(
+                coachId: coachId,
+                reason: controller.text.trim(),
+              );
+
+              if (!ctx.mounted) return;
+              Navigator.pop(ctx);
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    success
+                        ? 'Report berhasil dikirim'
+                        : 'Gagal mengirim report',
+                  ),
+                ),
+              );
+            },
+            child: const Text('Kirim'),
+          ),
+        ],
+      ),
+    );
+  }
+
 }

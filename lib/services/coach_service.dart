@@ -4,7 +4,6 @@ import '../models/schedule_model.dart';
 
 class CoachService {
   static const String baseUrl = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id';
-  // static const String baseUrl = 'http://127.0.0.1:8000';
   final CookieRequest request;
 
   CoachService(this.request);
@@ -24,7 +23,7 @@ class CoachService {
       final params = <String, String>{};
       if (query != null && query.isNotEmpty) params['search'] = query;
       if (country != null && country.isNotEmpty) params['citizenship'] = country;
-      if (sort != null && sort.isNotEmpty) params['ordering'] = sort; // backend may use 'ordering'
+      if (sort != null && sort.isNotEmpty) params['ordering'] = sort;
 
       String url = '$baseUrl/api/coach/';
       if (params.isNotEmpty) {
@@ -58,7 +57,6 @@ class CoachService {
     }
   }
 
-  /// Fetch single coach detail by id
   Future<Coach?> fetchCoachDetail(int id) async {
     try {
       final url = '$baseUrl/api/coach/$id/';
@@ -80,10 +78,8 @@ class CoachService {
     }
   }
 
-  /// Fetch schedules for a coach
   Future<List<Schedule>> fetchSchedules(int coachId) async {
     try {
-      // Correct URL: scheduler app is mounted under /coach/
       final url = '$baseUrl/coach/api/schedule/?coach=$coachId';
       final response = await request.get(url);
       
@@ -106,6 +102,7 @@ class CoachService {
           return schedules;
         }
       }
+      
       return [];
     } on FormatException catch (e) {
       throw Exception('Invalid data received from server.');
