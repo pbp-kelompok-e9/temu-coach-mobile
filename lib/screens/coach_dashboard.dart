@@ -44,12 +44,12 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
     print('🔍 Fetching: $baseUrl/coach/api/coach-profile/');
     print('🔍 LoggedIn: ${request.loggedIn}');
     
-    // Gunakan URL lengkap
+    
     final response = await request.get("$baseUrl/coach/api/coach-profile/");
     
     print('✅ Response: $response');
     
-    // Validasi response
+    
     if (response == null) {
       throw Exception('Response is null');
     }
@@ -825,106 +825,166 @@ void _showPendingDialog(Map<String, dynamic> response) {
   }
 
   Widget _buildScheduleSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.1),
+          spreadRadius: 1,
+          blurRadius: 5,
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Janji Temu',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.blue[900],
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Janji Temu',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue[900],
-            ),
-          ),
-          const Divider(height: 24),
-          jadwalList.isEmpty
-              ? Text(
-                  'Belum ada jadwal.',
-                  style: TextStyle(
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey[500],
-                  ),
-                )
-              : ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: jadwalList.length,
-                  itemBuilder: (context, index) {
-                    final jadwal = jadwalList[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.blue[800]!, width: 2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
+        ),
+        const Divider(height: 24),
+        jadwalList.isEmpty
+            ? Text(
+                'Belum ada jadwal.',
+                style: TextStyle(
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey[500],
+                ),
+              )
+            : ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: jadwalList.length,
+                itemBuilder: (context, index) {
+                  final jadwal = jadwalList[index];
+                  final isBooked = jadwal['is_booked'] == true;
+                  final booking = jadwal['booking'];
+                  final hasNotes = isBooked && 
+                                   booking != null && 
+                                   booking['notes'] != null && 
+                                   booking['notes'].toString().trim().isNotEmpty;
+                  
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.blue[800]!, width: 2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${jadwal['tanggal']}, ${jadwal['jam_mulai']} - ${jadwal['jam_selesai']}',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue[900],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    isBooked ? 'Sudah dipesan' : 'Tersedia',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: isBooked
+                                          ? Colors.red[600]
+                                          : Colors.green[600],
+                                    ),
+                                  ),
+                                  if (isBooked && booking != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Text(
+                                        'Dipesan oleh: ${booking['customer']['username']}',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => deleteSchedule(jadwal['id']),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red[600],
+                                foregroundColor: Colors.white,
+                              ),
+                              child: const Text('Batalkan'),
+                            ),
+                          ],
+                        ),
+                        if (hasNotes) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.blue[50],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Colors.blue[200]!,
+                                width: 1,
+                              ),
+                            ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  '${jadwal['tanggal']}, ${jadwal['jam_mulai']} - ${jadwal['jam_selesai']}',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blue[900],
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  jadwal['is_booked'] == true
-                                      ? 'Sudah dipesan'
-                                      : 'Tersedia',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: jadwal['is_booked'] == true
-                                        ? Colors.red[600]
-                                        : Colors.green[600],
-                                  ),
-                                ),
-                                if (jadwal['is_booked'] == true && jadwal['booking'] != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Text(
-                                      'Dipesan oleh: ${jadwal['booking']['customer']['username']}',
-                                      style: const TextStyle(fontSize: 12),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.message,
+                                      size: 16,
+                                      color: Colors.blue[700],
                                     ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Pesan dari Customer:',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blue[700],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  booking['notes'],
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[800],
+                                    height: 1.4,
                                   ),
+                                ),
                               ],
                             ),
                           ),
-                          ElevatedButton(
-                            onPressed: () => deleteSchedule(jadwal['id']),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red[600],
-                              foregroundColor: Colors.white,
-                            ),
-                            child: const Text('Batalkan'),
-                          ),
                         ],
-                      ),
-                    );
-                  },
-                ),
-        ],
-      ),
-    );
-  }
+                      ],
+                    ),
+                  );
+                },
+              ),
+      ],
+    ),
+  );
+}
 }
