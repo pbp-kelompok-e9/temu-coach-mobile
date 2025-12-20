@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/customer_provider.dart';
 import '../models/booking_model.dart';
+import '../widgets/app_drawer.dart';
 
 class CustomerDashboardPage extends StatelessWidget {
   const CustomerDashboardPage({super.key});
@@ -13,6 +14,7 @@ class CustomerDashboardPage extends StatelessWidget {
         title: const Text('Janji Temu Anda'),
         backgroundColor: Colors.blue[900],
       ),
+      drawer: const AppDrawer(),
       body: Consumer<CustomerDashboardProvider>(
         builder: (context, provider, _) {
           if (provider.loading) {
@@ -98,10 +100,97 @@ class _BookingCard extends StatelessWidget {
     required this.isUpcoming,
   });
 
-  @override
-  Widget build(BuildContext context) {
+  void _showEditNotesDialog(BuildContext context) {
+    final provider = context.read<CustomerDashboardProvider>();
+    final controller = TextEditingController(text: booking.notes ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Catatan'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Catatan',
+            hintText: 'Tambahkan catatan untuk sesi ini...',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final success = await provider.updateBookingNotes(
+                booking.id,
+                controller.text,
+              );
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      success
+                          ? 'Catatan berhasil diperbarui'
+                          : 'Gagal memperbarui catatan',
+                    ),
+                    backgroundColor: success ? Colors.green : Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCancelConfirmation(BuildContext context) {
     final provider = context.read<CustomerDashboardProvider>();
 
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Batalkan Booking'),
+        content: Text(
+          'Yakin ingin membatalkan janji temu dengan ${booking.coachName} pada ${booking.date}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Tidak'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final success = await provider.cancelBooking(booking.id);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      success
+                          ? 'Booking berhasil dibatalkan'
+                          : 'Gagal membatalkan booking',
+                    ),
+                    backgroundColor: success ? Colors.green : Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text('Ya, Batalkan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -130,42 +219,38 @@ class _BookingCard extends StatelessWidget {
             style: const TextStyle(fontWeight: FontWeight.w500),
           ),
 
-          const SizedBox(height: 8),
-
-          const Text('Fokus latihan:'),
-          Text(
-            booking.notes?.isNotEmpty == true ? booking.notes! : '-',
-            style: const TextStyle(color: Colors.grey),
-          ),
+          if (booking.notes?.isNotEmpty == true) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Catatan: ${booking.notes}',
+              style: const TextStyle(
+                color: Colors.grey,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
 
           const SizedBox(height: 12),
 
           if (isUpcoming)
-            Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton(
-                onPressed: () async {
-                  final success =
-                      await provider.cancelBooking(booking.id);
-
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          success
-                              ? 'Booking dibatalkan'
-                              : 'Gagal membatalkan booking',
-                        ),
-                      ),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _showEditNotesDialog(context),
+                  icon: const Icon(Icons.edit, size: 18),
+                  label: const Text('Edit Catatan'),
                 ),
-                child: const Text('Batalkan'),
-              ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () => _showCancelConfirmation(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Batalkan'),
+                ),
+              ],
             ),
 
           if (!isUpcoming)

@@ -4,6 +4,7 @@ import '../models/booking_model.dart';
 
 class BookingService {
   static const String baseUrl = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id';
+  // static const String baseUrl = 'http://127.0.0.1:8000';
   final CookieRequest request;
 
   BookingService(this.request);

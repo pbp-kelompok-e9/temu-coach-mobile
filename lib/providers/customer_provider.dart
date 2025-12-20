@@ -53,6 +53,23 @@ class CustomerDashboardProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> updateBookingNotes(int bookingId, String notes) async {
+    try {
+      final resp = await request.postJson(
+        '$baseUrl/api/booking/$bookingId/update/',
+        '{"notes": "$notes"}',
+      );
+
+      if (resp['success'] == true) {
+        await fetchMyBookings();
+        return true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> cancelBooking(int bookingId) async {
     try {
       final resp = await request.post(

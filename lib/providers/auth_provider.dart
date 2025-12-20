@@ -18,9 +18,9 @@ class AuthProvider with ChangeNotifier {
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  bool get isLoggedIn => _authService.isLoggedIn && _user != null;
+  bool get isLoggedIn => _request.loggedIn && _user != null;
   bool get isCoach => _user?.isCoach ?? false;
-  bool get isCustomer => _user?.isCustomer ?? true;
+  bool get isCustomer => _user?.isCustomer ?? false;
   bool get isAdmin => _user?.isAdmin ?? false;
 
   void _setLoading(bool value) {
@@ -109,7 +109,6 @@ class AuthProvider with ChangeNotifier {
     required String password2,
     String? firstName,
     String? lastName,
-    required String name,
     required int age,
     required String citizenship,
     required String club,
@@ -130,7 +129,6 @@ class AuthProvider with ChangeNotifier {
         password2: password2,
         firstName: firstName,
         lastName: lastName,
-        name: name,
         age: age,
         citizenship: citizenship,
         club: club,

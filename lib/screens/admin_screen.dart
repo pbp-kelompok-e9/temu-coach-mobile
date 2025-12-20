@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/admin_provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_drawer.dart';
 import 'login_screen.dart';
 
 
@@ -27,6 +28,7 @@ class _AdminScreenState extends State<AdminScreen> {
     final admin = Provider.of<AdminProvider>(context);
 
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text("Admin Dashboard - TemuCoach"),
         actions: [

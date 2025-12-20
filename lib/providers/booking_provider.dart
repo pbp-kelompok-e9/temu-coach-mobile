@@ -115,26 +115,32 @@ class BookingProvider with ChangeNotifier {
     }
   }
 
-  /// Get upcoming bookings (date in the future)
+  /// Get upcoming bookings (date >= today)
   List<Booking> get upcomingBookings {
     final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
     return _bookings.where((booking) {
       try {
         final bookingDate = DateTime.parse(booking.date);
-        return bookingDate.isAfter(now) || bookingDate.isAtSameMomentAs(now);
+        // Compare date only (ignore time)
+        final bookingDateOnly = DateTime(bookingDate.year, bookingDate.month, bookingDate.day);
+        return bookingDateOnly.isAfter(todayStart) || bookingDateOnly.isAtSameMomentAs(todayStart);
       } catch (e) {
         return false;
       }
     }).toList();
   }
 
-  /// Get completed bookings (date in the past)
+  /// Get completed bookings (date < today)
   List<Booking> get completedBookings {
     final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
     return _bookings.where((booking) {
       try {
         final bookingDate = DateTime.parse(booking.date);
-        return bookingDate.isBefore(now);
+        // Compare date only (ignore time)
+        final bookingDateOnly = DateTime(bookingDate.year, bookingDate.month, bookingDate.day);
+        return bookingDateOnly.isBefore(todayStart);
       } catch (e) {
         return false;
       }
