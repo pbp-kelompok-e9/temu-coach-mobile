@@ -10,6 +10,8 @@ import 'package:http/http.dart' as http;
 import 'dart:typed_data';
 import '../utils/error_mapper.dart';
 import '../widgets/retry_error_view.dart';
+import 'dart:io' if (dart.library.html) 'dart:html' as io;
+import 'dart:convert'; 
 
 class CoachDashboardPage extends StatefulWidget {
   const CoachDashboardPage({Key? key}) : super(key: key);
@@ -847,14 +849,35 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
   final request = context.read<CookieRequest>();
 
   try {
+    // ✅ DEBUG: Check authentication status
+    print('═══════════════════════════════════════');
+    print('🔍 DEBUG: Starting updateProfile');
+    print('🔍 Logged in: ${request.loggedIn}');
+    print('🔍 Available cookies: ${request.cookies.keys.toList()}');
+    print('🔍 Cookie count: ${request.cookies.length}');
+    
+    // Print cookie values (first 10 chars only for security)
+    request.cookies.forEach((key, value) {
+      final preview = value.length > 10 ? '${value.substring(0, 10)}...' : value;
+      print('🔍 Cookie[$key]: $preview');
+    });
+    print('═══════════════════════════════════════');
+
+    // ✅ CHECK: Ensure user is logged in
+    if (!request.loggedIn) {
+      throw Exception('Sesi berakhir. Silakan login lagi.');
+    }
 
     if ((imagePath != null && !kIsWeb) || (imageBytes != null && kIsWeb)) {
+      // ===== UPLOAD WITH PHOTO =====
+      print('📤 Starting photo upload...');
+      
       var multipartRequest = http.MultipartRequest(
         'POST',
         Uri.parse('$baseUrl/coach/update_coach_profile/'),
       );
 
- 
+      // Add all fields
       multipartRequest.fields['name'] = name;
       multipartRequest.fields['age'] = age;
       multipartRequest.fields['citizenship'] = citizenship;
@@ -865,8 +888,12 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       multipartRequest.fields['rate_per_session'] = rate;
       multipartRequest.fields['description'] = description;
 
+      // Add image file
       if (kIsWeb && imageBytes != null) {
-     
+        if (imageBytes.length > 5 * 1024 * 1024) {
+          throw Exception('Ukuran foto maksimal 5MB');
+        }
+        
         multipartRequest.files.add(
           http.MultipartFile.fromBytes(
             'foto',
@@ -874,62 +901,150 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
             filename: imageName ?? 'profile.jpg',
           ),
         );
+        print('📷 Added image from bytes: ${imageName ?? 'profile.jpg'}');
       } else if (!kIsWeb && imagePath != null) {
-     
+        final file = File(imagePath);
+        final fileSize = await file.length();
+        
+        if (fileSize > 5 * 1024 * 1024) {
+          throw Exception('Ukuran foto maksimal 5MB');
+        }
+        
         multipartRequest.files.add(
           await http.MultipartFile.fromPath('foto', imagePath),
         );
+        print('📷 Added image from path: $imagePath');
       }
 
-      try {
-        if (request.cookies.isNotEmpty) {
-          String cookieHeader = request.cookies.entries
-              .where((e) => e.key != null && e.value != null)
-              .map((e) => '${e.key}=${e.value}')
-              .join('; ');
-          if (cookieHeader.isNotEmpty) {
-            multipartRequest.headers['Cookie'] = cookieHeader;
-          }
-        }
-      } catch (e) {
-        print('⚠️ Error setting cookies: $e');
+      // ✅ IMPROVED COOKIE HANDLING
+      print('🍪 Setting up authentication...');
+      
+      // Get specific cookies we need
+      String? sessionId;
+      String? csrfToken;
+
+      // Check for sessionid (might be named 'sessionid' or 'session')
+      if (request.cookies.containsKey('sessionid')) {
+        sessionId = request.cookies['sessionid'];
+        print('🍪 Found sessionid: ${sessionId?.substring(0, 10)}...');
+      } else if (request.cookies.containsKey('session')) {
+        sessionId = request.cookies['session'];
+        print('🍪 Found session: ${sessionId?.substring(0, 10)}...');
       }
 
+      // Check for CSRF token
+      if (request.cookies.containsKey('csrftoken')) {
+        csrfToken = request.cookies['csrftoken'];
+        print('🍪 Found csrftoken: ${csrfToken?.substring(0, 10)}...');
+      }
+
+      // Validate we have session
+      if (sessionId == null || sessionId.isEmpty) {
+        print('❌ No valid session found');
+        throw Exception('Sesi berakhir. Silakan login lagi.');
+      }
+
+      // Build cookie string
+      final cookieList = <String>[];
+      cookieList.add('sessionid=$sessionId');
+
+      if (csrfToken != null && csrfToken.isNotEmpty) {
+        cookieList.add('csrftoken=$csrfToken');
+      }
+
+      // Set headers
+      multipartRequest.headers['Cookie'] = cookieList.join('; ');
+      multipartRequest.headers['Accept'] = 'application/json';
+      multipartRequest.headers['Referer'] = baseUrl;
+
+      // Set CSRF token header if available
+      if (csrfToken != null && csrfToken.isNotEmpty) {
+        multipartRequest.headers['X-CSRFToken'] = csrfToken;
+        print('🔒 CSRF token set in header');
+      }
+
+      print('📤 Cookie header set: sessionid=... (${sessionId.length} chars)');
+      print('📤 Total headers: ${multipartRequest.headers.keys.toList()}');
+      print('📤 Sending request to: ${multipartRequest.url}');
+
+      // Send request
       var streamedResponse = await multipartRequest.send();
       var response = await http.Response.fromStream(streamedResponse);
 
-      print('📤 Upload response status: ${response.statusCode}');
-      print('📤 Upload response body: ${response.body}');
+      print('📥 Response status: ${response.statusCode}');
+      print('📥 Response body: ${response.body}');
 
       if (response.statusCode == 200) {
-        if (coachData?['foto'] != null) {
-          try {
-            final imageUrl = '$baseUrl${coachData!['foto']}';
-            await precacheImage(NetworkImage(imageUrl), context);
+        // Parse response
+        try {
+          final jsonResponse = json.decode(response.body);
+          
+          if (jsonResponse['status'] == 'success') {
+            print('✅ Profile updated successfully!');
             
-            NetworkImage(imageUrl).evict();
-          } catch (e) {
-            print('⚠️ Error clearing cache: $e');
+            // Clear image cache
+            if (coachData?['foto'] != null) {
+              try {
+                final imageUrl = '$baseUrl${coachData!['foto']}';
+                NetworkImage(imageUrl).evict();
+                print('🗑️ Image cache cleared');
+              } catch (e) {
+                print('⚠️ Error clearing cache: $e');
+              }
+            }
+
+            // Refresh dashboard data
+            await fetchDashboardData();
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Profile dan foto berhasil diupdate!'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 3),
+                ),
+              );
+            }
+          } else {
+            throw Exception(jsonResponse['message'] ?? 'Update gagal');
+          }
+        } catch (e) {
+          if (e.toString().contains('FormatException')) {
+            // Response is not JSON, but status is 200, so assume success
+            print('⚠️ Response is not JSON, but status is 200');
+            await fetchDashboardData();
+            
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Profile berhasil diupdate!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          } else {
+            rethrow;
           }
         }
-
-        await fetchDashboardData();
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Profile dan foto berhasil diupdate!'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        print('❌ Authentication failed: ${response.statusCode}');
+        throw Exception('Sesi berakhir. Silakan login lagi.');
       } else {
-        throw Exception(
-          'Upload gagal: ${response.statusCode} - ${response.body}',
-        );
+        print('❌ Upload failed: ${response.statusCode}');
+        print('❌ Response body: ${response.body}');
+        
+        // Try to parse error message from response
+        try {
+          final jsonResponse = json.decode(response.body);
+          throw Exception(jsonResponse['message'] ?? 'Upload gagal: ${response.statusCode}');
+        } catch (e) {
+          throw Exception('Upload gagal: ${response.statusCode}');
+        }
       }
     } else {
+      // ===== UPDATE WITHOUT PHOTO =====
+      print('📤 Updating profile without photo...');
+      
       final response = await request.post(
         '$baseUrl/coach/update_coach_profile/',
         {
@@ -944,6 +1059,8 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
           'description': description,
         },
       );
+
+      print('📥 Response received: ${response['status']}');
 
       if (response['status'] == 'success') {
         await fetchDashboardData();
@@ -962,10 +1079,36 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
     }
   } catch (e) {
     print('❌ Error updating profile: $e');
+    print('❌ Stack trace:');
+    print(StackTrace.current);
+    
     if (mounted) {
+      final errorMessage = ErrorMapper.message(e);
+      
+      // If session expired, redirect to login
+      if (errorMessage.contains('Sesi berakhir') || 
+          errorMessage.contains('login') ||
+          errorMessage.contains('Unauthorized') ||
+          errorMessage.contains('authentication')) {
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        
+        // Wait a bit then redirect
+        await Future.delayed(const Duration(seconds: 1));
+        _redirectToLogin();
+        return;
+      }
+      
+      // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(ErrorMapper.message(e)),
+          content: Text(errorMessage),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 5),
         ),
