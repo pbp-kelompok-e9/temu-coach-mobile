@@ -3,15 +3,12 @@ import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../widgets/app_drawer.dart';
-<<<<<<< HEAD
 import '../providers/review_provider.dart';
-=======
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'dart:typed_data';
->>>>>>> 42077d9 (update foto profile coach)
 
 class CoachDashboardPage extends StatefulWidget {
   const CoachDashboardPage({Key? key}) : super(key: key);
@@ -503,35 +500,6 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
   }
 
   void showEditProfileModal() {
-<<<<<<< HEAD
-    final nameController = TextEditingController(
-      text: coachData?['name'] ?? '',
-    );
-    final ageController = TextEditingController(
-      text: coachData?['age']?.toString() ?? '',
-    );
-    final citizenshipController = TextEditingController(
-      text: coachData?['citizenship'] ?? '',
-    );
-    final clubController = TextEditingController(
-      text: coachData?['club'] ?? '',
-    );
-    final licenseController = TextEditingController(
-      text: coachData?['license'] ?? '',
-    );
-    final formationController = TextEditingController(
-      text: coachData?['preffered_formation'] ?? '',
-    );
-    final avgTermController = TextEditingController(
-      text: coachData?['average_term_as_coach']?.toString() ?? '',
-    );
-    final rateController = TextEditingController(
-      text: coachData?['rate_per_session']?.toString() ?? '',
-    );
-    final descriptionController = TextEditingController(
-      text: coachData?['description'] ?? '',
-    );
-=======
   final nameController = TextEditingController(text: coachData?['name'] ?? '');
   final ageController = TextEditingController(text: coachData?['age']?.toString() ?? '');
   final citizenshipController = TextEditingController(text: coachData?['citizenship'] ?? '');
@@ -545,7 +513,6 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
   String? selectedImagePath;   
   String? selectedImageName;
   Uint8List? selectedImageBytes;  
->>>>>>> 42077d9 (update foto profile coach)
 
   showDialog(
     context: context,
@@ -822,35 +789,6 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
   );
 }
 
-<<<<<<< HEAD
-  Future<void> updateProfile({
-    required String name,
-    required String age,
-    required String citizenship,
-    required String club,
-    required String license,
-    required String formation,
-    required String avgTerm,
-    required String rate,
-    required String description,
-  }) async {
-    final request = context.read<CookieRequest>();
-
-    try {
-      final response = await request
-          .post('$baseUrl/coach/update_coach_profile/', {
-            'name': name,
-            'age': age,
-            'citizenship': citizenship,
-            'club': club,
-            'license': license,
-            'preffered_formation': formation,
-            'average_term_as_coach': avgTerm,
-            'rate_per_session': rate,
-            'description': description,
-          });
-
-=======
 Future<void> updateProfile({
   required String name,
   required String age,
@@ -952,7 +890,6 @@ Future<void> updateProfile({
         }
       );
       
->>>>>>> 42077d9 (update foto profile coach)
       if (response['status'] == 'success') {
         await fetchDashboardData();
 
@@ -961,17 +898,8 @@ Future<void> updateProfile({
             const SnackBar(content: Text('Profile berhasil diupdate')),
           );
         }
-<<<<<<< HEAD
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
-=======
       } else {
         throw Exception(response['message'] ?? 'Update gagal');
->>>>>>> 42077d9 (update foto profile coach)
       }
     }
   } catch (e) {
