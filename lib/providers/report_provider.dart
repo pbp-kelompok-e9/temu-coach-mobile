@@ -8,40 +8,33 @@ class ReportProvider with ChangeNotifier {
   bool loading = false;
   String? error;
 
-  Future<bool> createReport(int coachId, String reason) async {
-    loading = true;
-    error = null;
-    notifyListeners();
+Future<bool> createReport(int coachId, String reason) async {
+  loading = true;
+  error = null;
+  notifyListeners();
 
-    final url =
-        'https://erico-putra-temucoach.pbp.cs.ui.ac.id/my_admin/api/report/create/coach/$coachId/';
+  final url = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id/reviews/report/$coachId/';
 
-    try {
-      debugPrint("🚨 SEND REPORT TO: $url");
-      debugPrint("📝 reason = $reason");
+  try {
+    final resp = await request.post(
+      url,
+      {
+        'reason': reason,
+      },
+    );
 
-      final resp = await request.post(
-        url,
-        {
-          'reason': reason,
-        },
-      );
-
-      debugPrint("✅ REPORT RESPONSE: $resp");
-
-      if (resp['success'] == true) {
-        return true;
-      } else {
-        error = resp['error'] ?? 'Failed to report';
-        return false;
-      }
-    } catch (e) {
-      debugPrint("❌ REPORT ERROR: $e");
-      error = e.toString();
+    if (resp['success'] == true) {
+      return true;
+    } else {
+      error = resp['error'] ?? 'Gagal mengirim laporan';
       return false;
-    } finally {
-      loading = false;
-      notifyListeners();
     }
+  } catch (e) {
+    error = e.toString();
+    return false;
+  } finally {
+    loading = false;
+    notifyListeners();
   }
+}
 }

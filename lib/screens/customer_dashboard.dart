@@ -271,13 +271,15 @@ class _BookingCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 TextButton.icon(
                   onPressed: () {
-                    showReportDialog(context, booking.coachId);
+                    // Berpindah ke halaman report seperti fitur review
+                    Navigator.pushNamed(
+                      context,
+                      '/report',
+                      arguments: booking.coachId, // Pastikan coachId diambil dari booking
+                    );
                   },
                   icon: const Icon(Icons.flag, color: Colors.red),
-                  label: const Text(
-                    'Laporkan',
-                    style: TextStyle(color: Colors.red),
-                  ),
+                  label: const Text('Laporkan', style: TextStyle(color: Colors.red)),
                 ),
               ],
             ),
@@ -311,6 +313,13 @@ void showReportDialog(BuildContext context, int coachId) {
             if (reason.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Alasan tidak boleh kosong')),
+              );
+              return;
+            }
+
+            if (coachId <= 0) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Coach ID tidak valid')),
               );
               return;
             }
