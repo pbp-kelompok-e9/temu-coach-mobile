@@ -108,6 +108,33 @@ class _AdminScreenState extends State<AdminScreen> {
                       color: AppColors.accent,
                     ),
                   ),
+
+                  DropdownButton<ReportSort>(
+                    value: admin.currentSort,
+                    onChanged: (value) {
+                      if (value != null) {
+                        admin.setSort(value);
+                      }
+                    },
+                    items: const [
+                      DropdownMenuItem(
+                        value: ReportSort.newest,
+                        child: Text('Terbaru'),
+                      ),
+                      DropdownMenuItem(
+                        value: ReportSort.oldest,
+                        child: Text('Terlama'),
+                      ),
+                      DropdownMenuItem(
+                        value: ReportSort.mostReports,
+                        child: Text('Coach dengan Report Terbanyak'),
+                      ),
+                      DropdownMenuItem(
+                        value: ReportSort.leastReports,
+                        child: Text('Coach dengan Report Tersedikit'),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
 
                   admin.reports.isEmpty

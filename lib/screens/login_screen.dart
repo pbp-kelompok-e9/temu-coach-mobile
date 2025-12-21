@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'admin_screen.dart';
+import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import 'register_screen.dart';
@@ -21,12 +22,66 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _didInit = false;
 
   @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _navigateAfterLogin(UserModel user) {
+    if (user.isAdmin) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const AdminScreen()),
+      );
+      return;
+    }
+
+    if (user.isCoach) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const CoachDashboardPage()),
+      );
+      return;
+    }
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (ctx) => ChangeNotifierProvider(
+          create: (_) => CustomerDashboardProvider(
+            ctx.read<CookieRequest>(),
+          )..fetchMyBookings(),
+          child: const CustomerDashboardPage(),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didInit) return;
+    _didInit = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final authProvider = context.read<AuthProvider>();
+
+      // If session is already in memory, skip login screen.
+      final currentUser = authProvider.user;
+      if (authProvider.isLoggedIn && currentUser != null) {
+        _navigateAfterLogin(currentUser);
+        return;
+      }
+
+      // Otherwise, attempt auto-login using saved credentials.
+      final ok = await authProvider.tryAutoLogin();
+      if (!mounted) return;
+      if (ok && authProvider.user != null) {
+        _navigateAfterLogin(authProvider.user!);
+      }
+    });
   }
 
   Future<void> _handleLogin() async {
@@ -40,30 +95,8 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (!mounted) return;
-
     if (success) {
-      final user = authProvider.user!;
-
-      if (user.isAdmin) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const AdminScreen()),
-        );
-      } else if (user.isCoach) {  
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const CoachDashboardPage()),
-      );
-      } else {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (ctx) => ChangeNotifierProvider(
-              create: (_) => CustomerDashboardProvider(
-                ctx.read<CookieRequest>(),
-              )..fetchMyBookings(),
-              child: const CustomerDashboardPage(),
-            ),
-          ),
-        );
-      }
+      _navigateAfterLogin(authProvider.user!);
     } else {
       
       ScaffoldMessenger.of(context).showSnackBar(

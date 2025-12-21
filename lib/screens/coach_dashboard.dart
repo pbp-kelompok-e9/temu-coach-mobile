@@ -853,7 +853,6 @@ Future<void> updateProfile({
           }
         }
       } catch (e) {
-        print('Error adding cookie header: $e');
       }
       
       var streamedResponse = await multipartRequest.send();

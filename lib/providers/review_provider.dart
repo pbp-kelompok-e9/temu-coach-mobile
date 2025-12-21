@@ -27,10 +27,7 @@ class ReviewProvider with ChangeNotifier {
     final url = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id/reviews/check/booking/$bookingId/'; 
 
     try {
-      debugPrint("REQUESTING: $url");
       final resp = await request.get(url);
-      
-      debugPrint("SUCCESS JSON: $resp");
       
       // Parse data
       hasReviewed = resp['has_review'] == true;
@@ -54,7 +51,6 @@ class ReviewProvider with ChangeNotifier {
       }
 
     } catch (e) {
-      debugPrint("ERROR CHECK REVIEW: $e");
       hasReviewed = false;
       userReview = null;
     } finally {
@@ -66,17 +62,13 @@ class ReviewProvider with ChangeNotifier {
   Future<bool> createReview(int bookingId, int rate, String? review) async {
     try {
       final url = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id/reviews/create/booking/$bookingId/'; 
-      debugPrint("Sending CREATE request to: $url");
 
       final response = await request.post(url, {
         'rate': rate.toString(),
         'review': review ?? '',
       });
 
-      debugPrint("CREATE RESPONSE: $response");
-
       if (response['success'] == true) {
-        debugPrint("SUCCESS: Review created."); 
         return true;
       } else {
         if (response.containsKey('existing_id') && response['existing_id'] != null) {
@@ -90,29 +82,24 @@ class ReviewProvider with ChangeNotifier {
            return await updateReview(rate, review);
         }
 
-        debugPrint("BACKEND REJECT: ${response['error']}");
         error = response['error'];
         notifyListeners();
         return false;
       }
 
     } catch (e) {
-      debugPrint('FLUTTER EXCEPTION: $e');
       return false;
     }
   }
 
   Future<bool> updateReview(int rate, String? review) async {
     if (userReviewId == null) {
-       debugPrint("Cannot update: userReviewId is null");
        return false;
     }
 
     final urlPath = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id/reviews/update/$userReviewId/'; 
 
     try {
-      debugPrint("SENDING UPDATE TO: $urlPath");
-      
       final resp = await request.post(
         urlPath,
         {
@@ -120,8 +107,6 @@ class ReviewProvider with ChangeNotifier {
           'review': review ?? '',
         },
       );
-
-      debugPrint('UPDATE RESPONSE: $resp');
       
       if (resp['success'] == true) {
         if (userReview != null) {
@@ -137,32 +122,23 @@ class ReviewProvider with ChangeNotifier {
         }
         return true;
       } else {
-        
-        final errorMsg = resp['error'] ?? 'Unknown error';
-        debugPrint("UPDATE FAILED: $errorMsg");
         return false;
       }
 
     } catch (e) {
-      debugPrint('UPDATE EXCEPTION: $e');
       return false;
     }
   }
 
   Future<bool> deleteReview() async {
     if (userReviewId == null) {
-      debugPrint("DELETE ERROR: userReviewId is null");
       return false;
     }
 
     final url = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id/reviews/delete/$userReviewId/';
 
     try {
-      debugPrint("DELETING REVIEW AT: $url");
-      
       final resp = await request.post(url, {});
-
-      debugPrint("DELETE RESPONSE: $resp");
 
       if (resp['success'] == true) {
         hasReviewed = false;
@@ -171,12 +147,10 @@ class ReviewProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        debugPrint("DELETE FAILED: ${resp['error']}");
         error = resp['error'];
         return false;
       }
     } catch (e) {
-      debugPrint("DELETE EXCEPTION: $e");
       return false;
     }
   }
@@ -187,13 +161,9 @@ class ReviewProvider with ChangeNotifier {
     notifyListeners();
 
     final url = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id/reviews/get_reviews_by_coach/$coachId/';
-    
-    debugPrint("[DEBUG] Fetching Full URL: $url");
 
     try {
       final resp = await request.get(url);
-
-      debugPrint("[DEBUG] Raw Response: $resp");
 
       if (resp['status'] == 'success') {
         final List data = resp['reviews'] ?? [];
@@ -202,7 +172,6 @@ class ReviewProvider with ChangeNotifier {
           try {
             return ReviewModel.fromJson(e);
           } catch (err) {
-            debugPrint("Parsing Error: $err");
             throw err;
           }
         }).toList();
@@ -219,7 +188,6 @@ class ReviewProvider with ChangeNotifier {
         coachReviews = [];
       }
     } catch (e) {
-      debugPrint("[DEBUG] ERROR: $e");
       error = e.toString();
     } finally {
       loading = false;

@@ -69,11 +69,10 @@ Aplikasi mobile berkomunikasi dengan backend Django (PWS) melalui web service (J
 - POST /api/booking/<id>/delete/
 
 ### Schedule
-- GET /api/schedule/?coach=<id>
+- GET /coach/api/schedule/?coach=<id> (jadwal coach tertentu, butuh login)
 - GET /coach/api/schedule/ (untuk coach yang login)
-- POST /coach/api/schedule/create/
-- PUT /coach/api/schedule/<id>/update/
-- DELETE /coach/api/schedule/<id>/delete/
+- POST /coach/add-schedule/ (tambah jadwal, untuk coach)
+- POST /coach/delete_schedule/<id>/ (hapus jadwal)
 
 ### Review & Rating
 - GET /api/reviews/?coach=<id>
@@ -86,8 +85,10 @@ Aplikasi mobile berkomunikasi dengan backend Django (PWS) melalui web service (J
 - GET /chat/api/contacts/ - Daftar kontak yang bisa dihubungi
 - GET /chat/api/<receiver_id>/ - Ambil pesan dengan user tertentu
 - POST /chat/api/<receiver_id>/ - Kirim pesan
-- PUT /chat/api/message/<message_id>/edit/ - Edit pesan (dalam 5 menit)
-- DELETE /chat/api/message/<message_id>/delete/ - Hapus pesan (dalam 5 menit)
+- POST /chat/api/message/<message_id>/edit/ - Edit pesan (dalam 5 menit) *(mobile)*
+- PUT /chat/api/message/<message_id>/edit/ - Edit pesan (dalam 5 menit) *(opsional)*
+- POST /chat/api/message/<message_id>/delete/ - Hapus pesan (dalam 5 menit) *(mobile)*
+- DELETE /chat/api/message/<message_id>/delete/ - Hapus pesan (dalam 5 menit) *(opsional)*
 
 ### Admin
 - GET /my_admin/api/reports/
