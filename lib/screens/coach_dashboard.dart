@@ -11,7 +11,8 @@ import 'dart:typed_data';
 import '../utils/error_mapper.dart';
 import '../widgets/retry_error_view.dart';
 import 'dart:convert';
-import 'dart:io' if (dart.library.html) 'dart:html';
+import 'dart:html' as html;
+import 'dart:io';
 
 
 class CoachDashboardPage extends StatefulWidget {
@@ -832,8 +833,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       ),
     );
   }
-
- Future<void> updateProfile({
+Future<void> updateProfile({
   required String name,
   required String age,
   required String citizenship,
@@ -850,208 +850,77 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
   final request = context.read<CookieRequest>();
 
   try {
-    print('═══════════════════════════════════════');
-    print('🔍 DEBUG: Starting updateProfile');
-    print('🔍 Logged in: ${request.loggedIn}');
-    print('🔍 Available cookies: ${request.cookies.keys.toList()}');
-    print('🔍 Cookie count: ${request.cookies.length}');
-    
-    request.cookies.forEach((key, cookie) {
-      final value = cookie.value;
-      final preview = value.length > 10 ? '${value.substring(0, 10)}...' : value;
-      print('🔍 Cookie[$key]: $preview');
-    });
-    print('═══════════════════════════════════════');
-
     if (!request.loggedIn) {
       throw Exception('Sesi berakhir. Silakan login lagi.');
     }
 
     if ((imagePath != null && !kIsWeb) || (imageBytes != null && kIsWeb)) {
-      print('📤 Starting photo upload...');
-      
-      var multipartRequest = http.MultipartRequest(
-        'POST',
-        Uri.parse('$baseUrl/coach/update_coach_profile/'),
-      );
-
-      // Add all fields
-      multipartRequest.fields['name'] = name;
-      multipartRequest.fields['age'] = age;
-      multipartRequest.fields['citizenship'] = citizenship;
-      multipartRequest.fields['club'] = club;
-      multipartRequest.fields['license'] = license;
-      multipartRequest.fields['preffered_formation'] = formation;
-      multipartRequest.fields['average_term_as_coach'] = avgTerm;
-      multipartRequest.fields['rate_per_session'] = rate;
-      multipartRequest.fields['description'] = description;
-
-      // ✅ PERBAIKAN: Add image file dengan platform check yang benar
-      // Add image file
       if (kIsWeb && imageBytes != null) {
-        // WEB: Use bytes directly
         if (imageBytes.length > 5 * 1024 * 1024) {
           throw Exception('Ukuran foto maksimal 5MB');
         }
-        
-        multipartRequest.files.add(
-          http.MultipartFile.fromBytes(
-            'foto',
-            imageBytes,
-            filename: imageName ?? 'profile.jpg',
-          ),
-        );
-        print('📷 Added image from bytes: ${imageName ?? 'profile.jpg'}');
+      }
+      
+      String base64Image = '';
+      
+      if (kIsWeb && imageBytes != null) {
+        base64Image = base64Encode(imageBytes);
       } else if (!kIsWeb && imagePath != null) {
-        // MOBILE: Use file path
-        // ✅ PERBAIKAN: Check file size via MultipartFile.fromPath
-        // Ini akan otomatis handle File() tanpa kita perlu import
         try {
-          final multipartFile = await http.MultipartFile.fromPath('foto', imagePath);
+          final bytes = await File(imagePath).readAsBytes();
           
-          // Check file size
-          if (multipartFile.length > 5 * 1024 * 1024) {
+          if (bytes.length > 5 * 1024 * 1024) {
             throw Exception('Ukuran foto maksimal 5MB');
           }
           
-          multipartRequest.files.add(multipartFile);
-          print('📷 Added image from path: $imagePath (${multipartFile.length} bytes)');
+          base64Image = base64Encode(bytes);
         } catch (e) {
-          print('❌ Error adding image file: $e');
           throw Exception('Gagal membaca file foto');
         }
       }
-      // Cookie handling
-      print('🍪 Setting up authentication...');
       
-      String? sessionId;
-      String? csrfToken;
+      final response = await request.post(
+        '$baseUrl/coach/update_coach_profile/',
+        {
+          'name': name,
+          'age': age,
+          'citizenship': citizenship,
+          'club': club,
+          'license': license,
+          'preffered_formation': formation,
+          'average_term_as_coach': avgTerm,
+          'rate_per_session': rate,
+          'description': description,
+          'foto_base64': base64Image,
+          'foto_name': imageName ?? 'profile.jpg',
+        },
+      );
 
-      if (request.cookies.containsKey('sessionid')) {
-        sessionId = request.cookies['sessionid']?.value;
-        if (sessionId != null) {
-          print('🍪 Found sessionid: ${sessionId.substring(0, sessionId.length > 10 ? 10 : sessionId.length)}...');
-        }
-      }
-      
-      if (sessionId == null && request.cookies.containsKey('session')) {
-        sessionId = request.cookies['session']?.value;
-        if (sessionId != null) {
-          print('🍪 Found session: ${sessionId.substring(0, sessionId.length > 10 ? 10 : sessionId.length)}...');
-        }
-      }
-
-      if (request.cookies.containsKey('csrftoken')) {
-        csrfToken = request.cookies['csrftoken']?.value;
-        if (csrfToken != null) {
-          print('🍪 Found csrftoken: ${csrfToken.substring(0, csrfToken.length > 10 ? 10 : csrfToken.length)}...');
-        }
-      }
-
-      if (sessionId == null || sessionId.isEmpty) {
-        print('❌ No valid session found');
-        print('❌ Available cookies: ${request.cookies.keys.toList()}');
-        throw Exception('Sesi berakhir. Silakan login lagi.');
-      }
-
-      final cookieList = <String>[];
-      cookieList.add('sessionid=$sessionId');
-
-      if (csrfToken != null && csrfToken.isNotEmpty) {
-        cookieList.add('csrftoken=$csrfToken');
-      }
-
-      final cookieHeader = cookieList.join('; ');
-      multipartRequest.headers['Cookie'] = cookieHeader;
-      multipartRequest.headers['Accept'] = 'application/json';
-      multipartRequest.headers['Referer'] = baseUrl;
-
-      if (csrfToken != null && csrfToken.isNotEmpty) {
-        multipartRequest.headers['X-CSRFToken'] = csrfToken;
-        print('🔒 CSRF token set in header');
-      }
-
-      print('📤 Cookie header: $cookieHeader');
-      print('📤 Total headers: ${multipartRequest.headers.keys.toList()}');
-      print('📤 Sending request to: ${multipartRequest.url}');
-
-      var streamedResponse = await multipartRequest.send();
-      var response = await http.Response.fromStream(streamedResponse);
-
-      print('📥 Response status: ${response.statusCode}');
-      print('📥 Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        try {
-          final jsonResponse = json.decode(response.body);
-          
-          if (jsonResponse['status'] == 'success') {
-            print('✅ Profile updated successfully!');
-            
-            if (coachData?['foto'] != null) {
-              try {
-                final imageUrl = '$baseUrl${coachData!['foto']}';
-                NetworkImage(imageUrl).evict();
-                print('🗑️ Image cache cleared');
-              } catch (e) {
-                print('⚠️ Error clearing cache: $e');
-              }
-            }
-
-            await fetchDashboardData();
-
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Profile dan foto berhasil diupdate!'),
-                  backgroundColor: Colors.green,
-                  duration: Duration(seconds: 3),
-                ),
-              );
-            }
-          } else {
-            throw Exception(jsonResponse['message'] ?? 'Update gagal');
-          }
-        } catch (e) {
-          if (e.toString().contains('FormatException')) {
-            print('⚠️ Response is not JSON, but status is 200');
-            await fetchDashboardData();
-            
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Profile berhasil diupdate!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            }
-          } else {
-            rethrow;
+      if (response['status'] == 'success') {
+        if (coachData?['foto'] != null) {
+          try {
+            final imageUrl = '$baseUrl${coachData!['foto']}';
+            NetworkImage(imageUrl).evict();
+          } catch (e) {
+            // Ignore cache clear errors
           }
         }
-      } else if (response.statusCode == 400) {
-        print('❌ Bad Request (400)');
-        try {
-          final jsonResponse = json.decode(response.body);
-          throw Exception(jsonResponse['message'] ?? 'Bad Request: ${response.body}');
-        } catch (e) {
-          throw Exception('Bad Request (400): Cookies atau CSRF token tidak valid');
+
+        await fetchDashboardData();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile dan foto berhasil diupdate!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+            ),
+          );
         }
-      } else if (response.statusCode == 401 || response.statusCode == 403) {
-        print('❌ Authentication failed: ${response.statusCode}');
-        throw Exception('Sesi berakhir. Silakan login lagi.');
       } else {
-        print('❌ Upload failed: ${response.statusCode}');
-        try {
-          final jsonResponse = json.decode(response.body);
-          throw Exception(jsonResponse['message'] ?? 'Upload gagal: ${response.statusCode}');
-        } catch (e) {
-          throw Exception('Upload gagal: ${response.statusCode}');
-        }
+        throw Exception(response['message'] ?? 'Update gagal');
       }
     } else {
-      print('📤 Updating profile without photo...');
-      
       final response = await request.post(
         '$baseUrl/coach/update_coach_profile/',
         {
@@ -1066,8 +935,6 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
           'description': description,
         },
       );
-
-      print('📥 Response received: ${response['status']}');
 
       if (response['status'] == 'success') {
         await fetchDashboardData();
@@ -1085,17 +952,12 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       }
     }
   } catch (e) {
-    print('❌ Error updating profile: $e');
-    print('❌ Stack trace:');
-    print(StackTrace.current);
-    
     if (mounted) {
       final errorMessage = ErrorMapper.message(e);
       
       if (errorMessage.contains('Sesi berakhir') || 
           errorMessage.contains('login') ||
-          errorMessage.contains('Unauthorized') ||
-          errorMessage.contains('authentication')) {
+          errorMessage.contains('Unauthorized')) {
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
