@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../models/booking_model.dart';
 import '../services/auth_service.dart';
+import '../utils/error_mapper.dart';
 
 class CustomerDashboardProvider with ChangeNotifier {
   final CookieRequest request;
@@ -46,7 +47,7 @@ class CustomerDashboardProvider with ChangeNotifier {
         }
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMapper.message(e);
     } finally {
       loading = false;
       notifyListeners();

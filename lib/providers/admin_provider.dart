@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../services/auth_service.dart';
+import '../utils/error_mapper.dart';
 enum ReportSort {
   newest,
   oldest,
@@ -35,7 +36,7 @@ class AdminProvider with ChangeNotifier {
       allReports = List<dynamic>.from(resp['reports'] ?? []);
       _applySort();
     } catch (e) {
-      error = e.toString();
+      error = ErrorMapper.message(e);
     } finally {
       loading = false;
       notifyListeners();

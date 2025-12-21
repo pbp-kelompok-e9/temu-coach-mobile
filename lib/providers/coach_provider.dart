@@ -3,6 +3,7 @@ import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../models/coach_model.dart';
 import '../models/schedule_model.dart';
 import '../services/coach_service.dart';
+import '../utils/error_mapper.dart';
 
 class CoachProvider with ChangeNotifier {
   final CookieRequest request;
@@ -46,7 +47,7 @@ class CoachProvider with ChangeNotifier {
       final list = await _service.fetchCoaches(query: query, country: country, sort: sortBy);
       _coaches = list;
     } catch (e) {
-      _setError(e.toString());
+      _setError(ErrorMapper.message(e));
     } finally {
       _setLoading(false);
     }
@@ -56,7 +57,7 @@ class CoachProvider with ChangeNotifier {
     try {
       return await _service.fetchCoachDetail(id);
     } catch (e) {
-      _setError(e.toString());
+      _setError(ErrorMapper.message(e));
       return null;
     }
   }
@@ -65,7 +66,7 @@ class CoachProvider with ChangeNotifier {
     try {
       return await _service.fetchSchedules(coachId);
     } catch (e) {
-      _setError(e.toString());
+      _setError(ErrorMapper.message(e));
       return [];
     }
   }

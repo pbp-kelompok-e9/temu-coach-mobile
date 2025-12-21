@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../models/booking_model.dart';
+import '../utils/error_mapper.dart';
 
 class BookingService {
   static const String baseUrl = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id';
@@ -66,7 +67,7 @@ class BookingService {
         error: 'Invalid response from server',
       );
     } catch (e) {
-      return BookingResponse(success: false, error: e.toString());
+      return BookingResponse(success: false, error: ErrorMapper.message(e));
     }
   }
 
@@ -88,7 +89,7 @@ class BookingService {
         error: 'Invalid response from server',
       );
     } catch (e) {
-      return BookingResponse(success: false, error: e.toString());
+      return BookingResponse(success: false, error: ErrorMapper.message(e));
     }
   }
 
@@ -107,7 +108,7 @@ class BookingService {
         error: 'Invalid response from server',
       );
     } catch (e) {
-      return BookingResponse(success: false, error: e.toString());
+      return BookingResponse(success: false, error: ErrorMapper.message(e));
     }
   }
 }
