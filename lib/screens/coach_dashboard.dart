@@ -24,7 +24,6 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
   Map<String, dynamic>? coachData;
   List<dynamic> jadwalList = [];
   bool isLoading = true;
-  int _selectedStarFilter = 0;
 
   String? _loadError;
 
@@ -518,405 +517,431 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
   }
 
   void showEditProfileModal() {
-  final nameController = TextEditingController(text: coachData?['name'] ?? '');
-  final ageController = TextEditingController(text: coachData?['age']?.toString() ?? '');
-  final citizenshipController = TextEditingController(text: coachData?['citizenship'] ?? '');
-  final clubController = TextEditingController(text: coachData?['club'] ?? '');
-  final licenseController = TextEditingController(text: coachData?['license'] ?? '');
-  final formationController = TextEditingController(text: coachData?['preffered_formation'] ?? '');
-  final avgTermController = TextEditingController(text: coachData?['average_term_as_coach']?.toString() ?? '');
-  final rateController = TextEditingController(text: coachData?['rate_per_session']?.toString() ?? '');
-  final descriptionController = TextEditingController(text: coachData?['description'] ?? '');
-  
-  String? selectedImagePath;   
-  String? selectedImageName;
-  Uint8List? selectedImageBytes;  
+    final nameController = TextEditingController(
+      text: coachData?['name'] ?? '',
+    );
+    final ageController = TextEditingController(
+      text: coachData?['age']?.toString() ?? '',
+    );
+    final citizenshipController = TextEditingController(
+      text: coachData?['citizenship'] ?? '',
+    );
+    final clubController = TextEditingController(
+      text: coachData?['club'] ?? '',
+    );
+    final licenseController = TextEditingController(
+      text: coachData?['license'] ?? '',
+    );
+    final formationController = TextEditingController(
+      text: coachData?['preffered_formation'] ?? '',
+    );
+    final avgTermController = TextEditingController(
+      text: coachData?['average_term_as_coach']?.toString() ?? '',
+    );
+    final rateController = TextEditingController(
+      text: coachData?['rate_per_session']?.toString() ?? '',
+    );
+    final descriptionController = TextEditingController(
+      text: coachData?['description'] ?? '',
+    );
 
-  showDialog(
-    context: context,
-    builder: (context) => StatefulBuilder(
-      builder: (context, setModalState) => AlertDialog(
-        title: const Text('Edit Profile'),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              
-              Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundImage: coachData?['foto'] != null
-                        ? NetworkImage('$baseUrl${coachData!['foto']}')
-                        : null,
-                    child: coachData?['foto'] == null
-                        ? const Icon(Icons.camera_alt, size: 40)
-                        : null,
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.blue[900],
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.edit, size: 20, color: Colors.white),
-                        onPressed: () async {
-                          if (kIsWeb) {
-                          
-                            try {
-                              FilePickerResult? result = await FilePicker.platform.pickFiles(
-                                type: FileType.image,
-                                allowMultiple: false,
-                              );
-                              
-                              if (result != null && result.files.first.bytes != null) {
-                                final bytes = result.files.first.bytes!;
-                                final fileName = result.files.first.name;
-                                
-                                setModalState(() {
-                                  selectedImageBytes = bytes;
-                                  selectedImageName = fileName;
-                                  selectedImagePath = null; 
-                                });
-                                
+    String? selectedImagePath;
+    String? selectedImageName;
+    Uint8List? selectedImageBytes;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          title: const Text('Edit Profile'),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundImage: coachData?['foto'] != null
+                          ? NetworkImage('$baseUrl${coachData!['foto']}')
+                          : null,
+                      child: coachData?['foto'] == null
+                          ? const Icon(Icons.camera_alt, size: 40)
+                          : null,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.blue[900],
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.edit,
+                            size: 20,
+                            color: Colors.white,
+                          ),
+                          onPressed: () async {
+                            if (kIsWeb) {
+                              try {
+                                FilePickerResult? result = await FilePicker
+                                    .platform
+                                    .pickFiles(
+                                      type: FileType.image,
+                                      allowMultiple: false,
+                                    );
+
+                                if (result != null &&
+                                    result.files.first.bytes != null) {
+                                  final bytes = result.files.first.bytes!;
+                                  final fileName = result.files.first.name;
+
+                                  setModalState(() {
+                                    selectedImageBytes = bytes;
+                                    selectedImageName = fileName;
+                                    selectedImagePath = null;
+                                  });
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Foto dipilih: $fileName'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('Foto dipilih: $fileName'),
-                                    backgroundColor: Colors.green,
+                                    content: Text('Error memilih foto: $e'),
+                                    backgroundColor: Colors.red,
                                   ),
                                 );
                               }
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error memilih foto: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          } else {
-                            
-                            try {
-                              final ImagePicker picker = ImagePicker();
-                              final XFile? image = await picker.pickImage(
-                                source: ImageSource.gallery,
-                                maxWidth: 800,
-                                maxHeight: 800,
-                                imageQuality: 85,
-                              );
-                              
-                              if (image != null) {
-                                setModalState(() {
-                                  selectedImagePath = image.path;
-                                  selectedImageName = image.name;
-                                  selectedImageBytes = null; 
-                                });
-                                
+                            } else {
+                              try {
+                                final ImagePicker picker = ImagePicker();
+                                final XFile? image = await picker.pickImage(
+                                  source: ImageSource.gallery,
+                                  maxWidth: 800,
+                                  maxHeight: 800,
+                                  imageQuality: 85,
+                                );
+
+                                if (image != null) {
+                                  setModalState(() {
+                                    selectedImagePath = image.path;
+                                    selectedImageName = image.name;
+                                    selectedImageBytes = null;
+                                  });
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Foto dipilih: ${image.name}',
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('Foto dipilih: ${image.name}'),
-                                    backgroundColor: Colors.green,
+                                    content: Text('Error memilih foto: $e'),
+                                    backgroundColor: Colors.red,
                                   ),
                                 );
                               }
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error memilih foto: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
                             }
-                          }
-                        },
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              if (selectedImageName != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text(
-                    'Foto baru: $selectedImageName',
-                    style: const TextStyle(fontSize: 12, color: Colors.green),
-                  ),
+                  ],
                 ),
-              const SizedBox(height: 24),
+                if (selectedImageName != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(
+                      'Foto baru: $selectedImageName',
+                      style: const TextStyle(fontSize: 12, color: Colors.green),
+                    ),
+                  ),
+                const SizedBox(height: 24),
 
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 16,
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Name',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 16,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              TextField(
-                controller: ageController,
-                decoration: const InputDecoration(
-                  labelText: 'Age',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 16,
+                TextField(
+                  controller: ageController,
+                  decoration: const InputDecoration(
+                    labelText: 'Age',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 16,
+                    ),
                   ),
+                  keyboardType: TextInputType.number,
                 ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              TextField(
-                controller: citizenshipController,
-                decoration: const InputDecoration(
-                  labelText: 'Citizenship',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 16,
+                TextField(
+                  controller: citizenshipController,
+                  decoration: const InputDecoration(
+                    labelText: 'Citizenship',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 16,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              TextField(
-                controller: clubController,
-                decoration: const InputDecoration(
-                  labelText: 'Club',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 16,
+                TextField(
+                  controller: clubController,
+                  decoration: const InputDecoration(
+                    labelText: 'Club',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 16,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              TextField(
-                controller: licenseController,
-                decoration: const InputDecoration(
-                  labelText: 'License',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 16,
+                TextField(
+                  controller: licenseController,
+                  decoration: const InputDecoration(
+                    labelText: 'License',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 16,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              TextField(
-                controller: formationController,
-                decoration: const InputDecoration(
-                  labelText: 'Preferred Formation',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 16,
+                TextField(
+                  controller: formationController,
+                  decoration: const InputDecoration(
+                    labelText: 'Preferred Formation',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 16,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              TextField(
-                controller: avgTermController,
-                decoration: const InputDecoration(
-                  labelText: 'Average Term (Years)',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 16,
+                TextField(
+                  controller: avgTermController,
+                  decoration: const InputDecoration(
+                    labelText: 'Average Term (Years)',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 16,
+                    ),
                   ),
+                  keyboardType: TextInputType.number,
                 ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              TextField(
-                controller: rateController,
-                decoration: const InputDecoration(
-                  labelText: 'Rate per Session',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 16,
+                TextField(
+                  controller: rateController,
+                  decoration: const InputDecoration(
+                    labelText: 'Rate per Session',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 16,
+                    ),
                   ),
+                  keyboardType: TextInputType.number,
                 ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              TextField(
-                controller: descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 16,
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 16,
+                    ),
+                    alignLabelWithHint: true,
                   ),
-                  alignLabelWithHint: true,
+                  maxLines: 4,
                 ),
-                maxLines: 4,
-              ),
-              const SizedBox(height: 8),
-            ],
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await updateProfile(
+                  name: nameController.text,
+                  age: ageController.text,
+                  citizenship: citizenshipController.text,
+                  club: clubController.text,
+                  license: licenseController.text,
+                  formation: formationController.text,
+                  avgTerm: avgTermController.text,
+                  rate: rateController.text,
+                  description: descriptionController.text,
+                  imagePath: selectedImagePath,
+                  imageBytes: selectedImageBytes,
+                  imageName: selectedImageName,
+                );
+                if (mounted) Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue[900],
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Simpan'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await updateProfile(
-                name: nameController.text,
-                age: ageController.text,
-                citizenship: citizenshipController.text,
-                club: clubController.text,
-                license: licenseController.text,
-                formation: formationController.text,
-                avgTerm: avgTermController.text,
-                rate: rateController.text,
-                description: descriptionController.text,
-                imagePath: selectedImagePath,      
-                imageBytes: selectedImageBytes,    
-                imageName: selectedImageName,      
-              );
-              if (mounted) Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue[900],
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Simpan'),
-          ),
-        ],
       ),
-    ),
-  );
-}
+    );
+  }
 
-Future<void> updateProfile({
-  required String name,
-  required String age,
-  required String citizenship,
-  required String club,
-  required String license,
-  required String formation,
-  required String avgTerm,
-  required String rate,
-  required String description,
-  String? imagePath,      
-  Uint8List? imageBytes,  
-  String? imageName,     
-}) async {
-  final request = context.read<CookieRequest>();
-  
-  try {
+  Future<void> updateProfile({
+    required String name,
+    required String age,
+    required String citizenship,
+    required String club,
+    required String license,
+    required String formation,
+    required String avgTerm,
+    required String rate,
+    required String description,
+    String? imagePath,
+    Uint8List? imageBytes,
+    String? imageName,
+  }) async {
+    final request = context.read<CookieRequest>();
 
-    if ((imagePath != null && !kIsWeb) || (imageBytes != null && kIsWeb)) {
-      
-      var multipartRequest = http.MultipartRequest(
-        'POST',
-        Uri.parse('$baseUrl/coach/update_coach_profile/'),
-      );
-      
-     
-      multipartRequest.fields['name'] = name;
-      multipartRequest.fields['age'] = age;
-      multipartRequest.fields['citizenship'] = citizenship;
-      multipartRequest.fields['club'] = club;
-      multipartRequest.fields['license'] = license;
-      multipartRequest.fields['preffered_formation'] = formation;
-      multipartRequest.fields['average_term_as_coach'] = avgTerm;
-      multipartRequest.fields['rate_per_session'] = rate;
-      multipartRequest.fields['description'] = description;
-      
-   
-      if (kIsWeb && imageBytes != null) {
-       
-        multipartRequest.files.add(
-          http.MultipartFile.fromBytes(
-            'foto',
-            imageBytes,
-            filename: imageName ?? 'profile.jpg',
-          ),
+    try {
+      if ((imagePath != null && !kIsWeb) || (imageBytes != null && kIsWeb)) {
+        var multipartRequest = http.MultipartRequest(
+          'POST',
+          Uri.parse('$baseUrl/coach/update_coach_profile/'),
         );
-      } else if (!kIsWeb && imagePath != null) {
-       
-        multipartRequest.files.add(
-          await http.MultipartFile.fromPath('foto', imagePath),
-        );
-      }
-      
-      try {
-        if (request.cookies.isNotEmpty) {
-          String cookieHeader = request.cookies.entries
-              .where((e) => e.key != null && e.value != null)
-              .map((e) => '${e.key}=${e.value}')
-              .join('; ');
-          if (cookieHeader.isNotEmpty) {
-            multipartRequest.headers['Cookie'] = cookieHeader;
-          }
-        }
-      } catch (e) {
-      }
-      
-      var streamedResponse = await multipartRequest.send();
-      var response = await http.Response.fromStream(streamedResponse);
-      
-      if (response.statusCode == 200) {
-        await fetchDashboardData();
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Profile dan foto berhasil diupdate!'),
-              backgroundColor: Colors.green,
+
+        multipartRequest.fields['name'] = name;
+        multipartRequest.fields['age'] = age;
+        multipartRequest.fields['citizenship'] = citizenship;
+        multipartRequest.fields['club'] = club;
+        multipartRequest.fields['license'] = license;
+        multipartRequest.fields['preffered_formation'] = formation;
+        multipartRequest.fields['average_term_as_coach'] = avgTerm;
+        multipartRequest.fields['rate_per_session'] = rate;
+        multipartRequest.fields['description'] = description;
+
+        if (kIsWeb && imageBytes != null) {
+          multipartRequest.files.add(
+            http.MultipartFile.fromBytes(
+              'foto',
+              imageBytes,
+              filename: imageName ?? 'profile.jpg',
             ),
           );
+        } else if (!kIsWeb && imagePath != null) {
+          multipartRequest.files.add(
+            await http.MultipartFile.fromPath('foto', imagePath),
+          );
         }
-      } else {
-        throw Exception('Upload gagal: ${response.statusCode} - ${response.body}');
-      }
-      
-    } else {
-      final response = await request.post(
-        '$baseUrl/coach/update_coach_profile/',
-        {
-          'name': name,
-          'age': age,
-          'citizenship': citizenship,
-          'club': club,
-          'license': license,
-          'preffered_formation': formation,
-          'average_term_as_coach': avgTerm,
-          'rate_per_session': rate,
-          'description': description,
-        }
-      );
-      
-      if (response['status'] == 'success') {
-        await fetchDashboardData();
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profile berhasil diupdate')),
+        try {
+          if (request.cookies.isNotEmpty) {
+            String cookieHeader = request.cookies.entries
+                .where((e) => e.key != null && e.value != null)
+                .map((e) => '${e.key}=${e.value}')
+                .join('; ');
+            if (cookieHeader.isNotEmpty) {
+              multipartRequest.headers['Cookie'] = cookieHeader;
+            }
+          }
+        } catch (e) {}
+
+        var streamedResponse = await multipartRequest.send();
+        var response = await http.Response.fromStream(streamedResponse);
+
+        if (response.statusCode == 200) {
+          await fetchDashboardData();
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Profile dan foto berhasil diupdate!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } else {
+          throw Exception(
+            'Upload gagal: ${response.statusCode} - ${response.body}',
           );
         }
       } else {
-        throw Exception(response['message'] ?? 'Update gagal');
+        final response = await request
+            .post('$baseUrl/coach/update_coach_profile/', {
+              'name': name,
+              'age': age,
+              'citizenship': citizenship,
+              'club': club,
+              'license': license,
+              'preffered_formation': formation,
+              'average_term_as_coach': avgTerm,
+              'rate_per_session': rate,
+              'description': description,
+            });
+
+        if (response['status'] == 'success') {
+          await fetchDashboardData();
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Profile berhasil diupdate')),
+            );
+          }
+        } else {
+          throw Exception(response['message'] ?? 'Update gagal');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   } catch (e) {
@@ -929,7 +954,6 @@ Future<void> updateProfile({
       );
     }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -976,7 +1000,8 @@ Future<void> updateProfile({
               'assets/images/logo_whistle.png',
               width: 28,
               height: 28,
-              errorBuilder: (context, error, stackTrace) => const Icon(Icons.sports, color: Colors.white),
+              errorBuilder: (context, error, stackTrace) =>
+                  const Icon(Icons.sports, color: Colors.white),
             ),
             const SizedBox(width: 8),
             const Text('Coach'),
@@ -994,8 +1019,6 @@ Future<void> updateProfile({
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildProfileSection(),
-              const SizedBox(height: 16),
-              _buildRatingSection(),
               const SizedBox(height: 16),
               _buildAddScheduleSection(),
               const SizedBox(height: 16),
@@ -1477,281 +1500,4 @@ Future<void> updateProfile({
     );
   }
 
-  Widget _buildRatingSection() {
-    final reviewProvider = context.watch<ReviewProvider>();
-    
-    // Logic Filter Lokal di UI
-    List<dynamic> filteredReviews = reviewProvider.coachReviews;
-    if (_selectedStarFilter > 0) {
-      filteredReviews = filteredReviews.where((r) => r.rate == _selectedStarFilter).toList();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Reviews (${reviewProvider.totalReviews})',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue[900],
-                ),
-              ),
-              // Tombol Reset Filter jika sedang memfilter
-              if (_selectedStarFilter != 0)
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _selectedStarFilter = 0;
-                    });
-                  },
-                  child: const Text('Reset Filter'),
-                ),
-            ],
-          ),
-        ),
-        
-        const SizedBox(height: 12),
-
-        // --- FILTER CHIPS (Rating Filter) ---
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _buildFilterChip(0, 'Semua'),
-              const SizedBox(width: 8),
-              _buildFilterChip(5, '5 ★'),
-              const SizedBox(width: 8),
-              _buildFilterChip(4, '4 ★'),
-              const SizedBox(width: 8),
-              _buildFilterChip(3, '3 ★'),
-              const SizedBox(width: 8),
-              _buildFilterChip(2, '2 ★'),
-              const SizedBox(width: 8),
-              _buildFilterChip(1, '1 ★'),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 16),
-
-        // --- HORIZONTAL LIST (Summary Card + Review Cards) ---
-        SizedBox(
-          height: 190, // Tinggi fixed agar bisa scroll horizontal
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            // Item count +1 karena index 0 dipakai untuk Summary Card
-            itemCount: filteredReviews.length + 1, 
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                // Item pertama selalu Summary Card (Rata-rata)
-                return _buildSummaryCard(reviewProvider);
-              } else {
-                // Item selanjutnya adalah Review Card
-                final review = filteredReviews[index - 1];
-                return _buildReviewCard(review);
-              }
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  // --- WIDGET HELPER BARU: TOMBOL FILTER ---
-  Widget _buildFilterChip(int star, String label) {
-    bool isSelected = _selectedStarFilter == star;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      selectedColor: Colors.blue[100],
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.blue[900] : Colors.grey[700],
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-      ),
-      onSelected: (bool selected) {
-        setState(() {
-          _selectedStarFilter = star;
-        });
-      },
-    );
-  }
-
-  // --- WIDGET HELPER BARU: KARTU SUMMARY (RATA-RATA) ---
-  Widget _buildSummaryCard(ReviewProvider provider) {
-    return Container(
-      width: 280, // Lebar fixed
-      margin: const EdgeInsets.only(right: 12, bottom: 4, top: 4),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.15),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Sisi Kiri: Angka Besar
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                provider.averageRating.toStringAsFixed(1),
-                style: const TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              Row(
-                children: List.generate(5, (i) {
-                  return Icon(
-                    i < provider.averageRating.round() ? Icons.star : Icons.star_border,
-                    color: Colors.amber,
-                    size: 16,
-                  );
-                }),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${provider.totalReviews} ulasan',
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
-              ),
-            ],
-          ),
-          const SizedBox(width: 16),
-          // Sisi Kanan: Progress Bars
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(5, (i) {
-                final star = 5 - i;
-                final count = provider.ratingCounts[star] ?? 0;
-                final percent = provider.totalReviews == 0
-                    ? 0.0
-                    : count / provider.totalReviews;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Row(
-                    children: [
-                      Text('$star', style: const TextStyle(fontSize: 10)),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: LinearProgressIndicator(
-                          value: percent,
-                          minHeight: 4,
-                          backgroundColor: Colors.grey[200],
-                          color: Colors.blue[800],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- WIDGET HELPER BARU: KARTU REVIEW INDIVIDUAL ---
-  Widget _buildReviewCard(dynamic review) {
-    // Parsing data review (sesuaikan dengan field di model/json kamu)
-    // Asumsi review punya field: user (username), rate, review (text), created_at
-    // Jika pake model class, ganti review['field'] jadi review.field
-    
-    // Handle formatting tanggal simpel manual (tanpa intl package)
-    String dateStr = "Recently";
-    if (review.createdAt != null) {
-       DateTime dt = review.createdAt; // Asumsi fieldnya createdAt tipe DateTime
-       dateStr = "${dt.day}/${dt.month}/${dt.year}";
-    }
-
-    return Container(
-      width: 260, // Lebar kartu review
-      margin: const EdgeInsets.only(right: 12, bottom: 4, top: 4),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Bintang
-          Row(
-            children: List.generate(5, (index) {
-              return Icon(
-                index < review.rate ? Icons.star : Icons.star_border,
-                color: Colors.amber,
-                size: 18,
-              );
-            }),
-          ),
-          const SizedBox(height: 8),
-          
-          // User & Date
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                review.user ?? 'Anonymous', // Username
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                dateStr,
-                style: TextStyle(fontSize: 10, color: Colors.grey[500]),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 8),
-          const Divider(),
-          const SizedBox(height: 8),
-          
-          // Isi Review
-          Expanded(
-            child: Text(
-              review.review != null && review.review.isNotEmpty 
-                  ? review.review 
-                  : 'Tidak ada komentar.',
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey[800],
-                fontStyle: (review.review == null || review.review.isEmpty) 
-                    ? FontStyle.italic 
-                    : FontStyle.normal,
-              ),
-              maxLines: 4,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
