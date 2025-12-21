@@ -3,7 +3,7 @@
 [![Build Status](https://app.bitrise.io/app/69c63ba6-60f0-49ad-9321-9fb85ada77c9/status.svg?token=ikodLQfnbZvRGAeBuL-U2A&branch=master)](https://app.bitrise.io/app/69c63ba6-60f0-49ad-9321-9fb85ada77c9)
 
 ## Download APK
-Versi terbaru: [Download APK](https://app.bitrise.io/app/69c63ba6-60f0-49ad-9321-9fb85ada77c9/installable-artifacts/7a6c40d0dda186e6/public-install-page/69aa58a41dd7200efaffe6ef4b716b7a)
+Versi terbaru: [Download APK](https://app.bitrise.io/app/5efd293b-a96f-4a96-b8b6-708fa118fbf0/installable-artifacts/4f9cac4177f2a508/public-install-page/dfbea46bce149fc5045e721316834513)
 
 ## Anggota Kelompok
 - Mohammad Aly Haidarulloh - 2406425804
