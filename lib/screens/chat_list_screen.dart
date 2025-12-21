@@ -246,11 +246,15 @@ class _ChatListScreenState extends State<ChatListScreen>
           children: [
             Image.asset(
               'assets/images/logo_whistle.png',
-              width: 28,
-              height: 28,
-              errorBuilder: (context, error, stackTrace) => const Icon(Icons.sports, color: Colors.white),
+              width: 24,
+              height: 24,
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.sports_soccer,
+                size: 22,
+                color: Colors.white,
+              ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             const Text(
               'Chat',
               style: TextStyle(fontWeight: FontWeight.bold),
@@ -777,18 +781,11 @@ class _ChatListScreenState extends State<ChatListScreen>
                 ],
               ),
             ),
-            
-            // Chat button
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFDE3400),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.chat, color: Colors.white, size: 20),
-                onPressed: () => _openChatRoom(contact.id, contact.name),
-                tooltip: 'Mulai Chat',
-              ),
+
+            // Arrow (match Percakapan list)
+            Icon(
+              Icons.chevron_right,
+              color: Colors.grey[400],
             ),
           ],
         ),

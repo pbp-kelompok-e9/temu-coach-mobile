@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../models/chat_message.dart';
 
@@ -24,7 +23,6 @@ class ChatService {
       }
       return [];
     } catch (e) {
-      print('Error fetching conversations: $e');
       return [];
     }
   }
@@ -42,7 +40,6 @@ class ChatService {
       }
       return [];
     } catch (e) {
-      print('Error fetching contacts: $e');
       return [];
     }
   }
@@ -67,7 +64,6 @@ class ChatService {
         'receiver_username': response['receiver_username'],
       };
     } catch (e) {
-      print('Error fetching messages: $e');
       return {
         'messages': <ChatMessage>[],
         'receiver_id': receiverId,
@@ -90,7 +86,6 @@ class ChatService {
       }
       return null;
     } catch (e) {
-      print('Error sending message: $e');
       return null;
     }
   }
@@ -107,10 +102,8 @@ class ChatService {
       if (response['success'] == true) {
         return true;
       }
-      print('Edit message failed: ${response['error'] ?? 'Unknown error'}');
       return false;
     } catch (e) {
-      print('Error editing message: $e');
       return false;
     }
   }
@@ -127,10 +120,8 @@ class ChatService {
       if (response['success'] == true) {
         return true;
       }
-      print('Delete message failed: ${response['error'] ?? 'Unknown error'}');
       return false;
     } catch (e) {
-      print('Error deleting message: $e');
       return false;
     }
   }

@@ -88,14 +88,6 @@ class ChatBubble extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.access_time,
-                            size: 12,
-                            color: isMine 
-                                ? Colors.white.withOpacity(0.8) 
-                                : Colors.grey[500],
-                          ),
-                          const SizedBox(width: 4),
                           Text(
                             timeString,
                             style: TextStyle(

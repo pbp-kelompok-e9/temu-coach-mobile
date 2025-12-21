@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../services/auth_service.dart';
+enum ReportSort {
+  newest,
+  oldest,
+  mostReports,
+  leastReports,
+}
 
 class AdminProvider with ChangeNotifier {
   final CookieRequest request;
@@ -10,6 +16,9 @@ class AdminProvider with ChangeNotifier {
   bool loading = false;
   String? error;
 
+  ReportSort currentSort = ReportSort.newest;
+
+  List<dynamic> allReports = [];
   List<dynamic> reports = [];
   List<dynamic> coachRequests = [];
 
@@ -17,23 +26,74 @@ class AdminProvider with ChangeNotifier {
 
   Future<void> loadData() async {
     loading = true;
-    error = null;
     notifyListeners();
 
     try {
-      final reportsResp =
+      final resp =
           await request.get('$baseUrl/my_admin/api/reports/');
-      final coachResp =
-          await request.get('$baseUrl/my_admin/api/coach-requests/');
 
-      reports = List<dynamic>.from(reportsResp['reports'] ?? []);
-      coachRequests = List<dynamic>.from(coachResp['requests'] ?? []);
+      allReports = List<dynamic>.from(resp['reports'] ?? []);
+      _applySort();
     } catch (e) {
       error = e.toString();
     } finally {
       loading = false;
       notifyListeners();
     }
+  }
+
+  void setSort(ReportSort sort) {
+    currentSort = sort;
+    _applySort();
+    notifyListeners();
+  }
+
+  void _applySort() {
+    reports = List<dynamic>.from(allReports);
+
+    switch (currentSort) {
+      case ReportSort.newest:
+        reports.sort((a, b) =>
+            b['created_at'].compareTo(a['created_at']));
+        break;
+
+      case ReportSort.oldest:
+        reports.sort((a, b) =>
+            a['created_at'].compareTo(b['created_at']));
+        break;
+
+      case ReportSort.mostReports:
+        _sortByCoachReportCount(desc: true);
+        break;
+
+      case ReportSort.leastReports:
+        _sortByCoachReportCount(desc: false);
+        break;
+    }
+  }
+
+  void _sortByCoachReportCount({required bool desc}) {
+    final Map<int, int> countPerCoach = {};
+
+    for (final r in allReports) {
+      final coachId = r['coach_id'];
+      countPerCoach[coachId] =
+          (countPerCoach[coachId] ?? 0) + 1;
+    }
+
+    reports.sort((a, b) {
+      final countA = countPerCoach[a['coach_id']] ?? 0;
+      final countB = countPerCoach[b['coach_id']] ?? 0;
+
+      if (countA != countB) {
+        return desc
+            ? countB.compareTo(countA)
+            : countA.compareTo(countB);
+      }
+
+      // fallback: newest first
+      return b['created_at'].compareTo(a['created_at']);
+    });
   }
 
   Future<bool> approve(int coachId) async {
