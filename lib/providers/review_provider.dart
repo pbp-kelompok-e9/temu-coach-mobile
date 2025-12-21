@@ -27,10 +27,10 @@ class ReviewProvider with ChangeNotifier {
     final url = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id/reviews/check/booking/$bookingId/'; 
 
     try {
-      debugPrint("🔍 REQUESTING: $url");
+      debugPrint("REQUESTING: $url");
       final resp = await request.get(url);
       
-      debugPrint("✅ SUCCESS JSON: $resp");
+      debugPrint("SUCCESS JSON: $resp");
       
       // Parse data
       hasReviewed = resp['has_review'] == true;
