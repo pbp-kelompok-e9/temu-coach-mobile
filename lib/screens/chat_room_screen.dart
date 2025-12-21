@@ -8,6 +8,7 @@ import '../services/chat_service.dart';
 import '../services/connectivity_service.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/chat_input.dart';
+import '../widgets/retry_error_view.dart';
 
 class ChatRoomScreen extends StatefulWidget {
   final int receiverId;
@@ -365,30 +366,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
               ),
             ),
           
-          // Error banner with retry
-          if (_errorMessage != null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              color: Colors.red[50],
-              child: Row(
-                children: [
-                  Icon(Icons.error_outline, color: Colors.red[700], size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      _errorMessage!,
-                      style: TextStyle(color: Colors.red[700], fontSize: 13),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: _loadMessages,
-                    child: const Text('Coba Lagi'),
-                  ),
-                ],
-              ),
-            ),
-          
           // Messages area
           Expanded(
             child: Container(
@@ -405,9 +382,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                         color: Color(0xFFDE3400),
                       ),
                     )
-                  : _messages.isEmpty
-                      ? _buildEmptyState()
-                      : _buildMessagesList(),
+                  : (_errorMessage != null && _messages.isEmpty)
+                      ? RetryErrorView(
+                          message: _errorMessage!,
+                          onRetry: _loadMessages,
+                        )
+                      : _messages.isEmpty
+                          ? _buildEmptyState()
+                          : _buildMessagesList(),
             ),
           ),
           

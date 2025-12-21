@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
+import '../utils/error_mapper.dart';
 
 class ReportProvider with ChangeNotifier {
   final CookieRequest request;
@@ -30,7 +31,7 @@ Future<bool> createReport(int coachId, String reason) async {
       return false;
     }
   } catch (e) {
-    error = e.toString();
+    error = ErrorMapper.message(e);
     return false;
   } finally {
     loading = false;

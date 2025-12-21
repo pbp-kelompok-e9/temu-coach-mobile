@@ -4,6 +4,7 @@ import 'package:temu_coach_mobile/providers/report_provider.dart';
 import '../providers/customer_provider.dart';
 import '../models/booking_model.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/retry_error_view.dart';
 
 class CustomerDashboardPage extends StatelessWidget {
   const CustomerDashboardPage({super.key});
@@ -36,7 +37,10 @@ class CustomerDashboardPage extends StatelessWidget {
           }
 
           if (provider.error != null) {
-            return Center(child: Text(provider.error!));
+            return RetryErrorView(
+              message: provider.error!,
+              onRetry: provider.fetchMyBookings,
+            );
           }
 
           return RefreshIndicator(

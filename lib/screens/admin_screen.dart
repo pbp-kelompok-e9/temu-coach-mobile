@@ -4,6 +4,7 @@ import '../providers/admin_provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/retry_error_view.dart';
 import 'login_screen.dart';
 
 
@@ -94,6 +95,11 @@ class _AdminScreenState extends State<AdminScreen> {
       ),
       body: admin.loading
           ? const Center(child: CircularProgressIndicator())
+          : admin.error != null
+            ? RetryErrorView(
+              message: admin.error!,
+              onRetry: admin.loadData,
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(

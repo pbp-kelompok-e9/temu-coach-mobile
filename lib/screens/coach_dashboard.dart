@@ -7,8 +7,9 @@ import '../providers/review_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
-import 'dart:io';
 import 'dart:typed_data';
+import '../utils/error_mapper.dart';
+import '../widgets/retry_error_view.dart';
 
 class CoachDashboardPage extends StatefulWidget {
   const CoachDashboardPage({Key? key}) : super(key: key);
@@ -23,6 +24,8 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
   Map<String, dynamic>? coachData;
   List<dynamic> jadwalList = [];
   bool isLoading = true;
+
+  String? _loadError;
 
   String selectedFilter = 'Semua';
 
@@ -75,6 +78,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
     }
 
     try {
+      _loadError = null;
       final response = await request.get("$baseUrl/coach/api/coach-profile/");
 
       if (response == null) {
@@ -103,6 +107,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
           coachData = response['coach'];
           jadwalList = response['jadwal_list'] ?? [];
           isLoading = false;
+          _loadError = null;
         });
         final reviewProvider = context.read<ReviewProvider>();
         await reviewProvider.fetchReviewsByCoach(coachData!['id']);
@@ -119,22 +124,31 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
         throw Exception('Unknown response status: $status');
       }
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-
-        if (e.toString().contains('unauthorized') ||
-            e.toString().contains('Login required')) {
+        final friendly = ErrorMapper.message(e);
+        if (friendly == 'Sesi berakhir. Silakan login lagi.') {
+          setState(() {
+            isLoading = false;
+            _loadError = null;
+          });
           _redirectToLogin();
+          return;
+        }
+
+        setState(() {
+          isLoading = false;
+          _loadError = friendly;
+        });
+
+        // If we already have data rendered, keep UX lightweight with a snackbar.
+        if (coachData != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(friendly),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
+          );
         }
       }
     }
@@ -232,7 +246,9 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+        ).showSnackBar(
+          SnackBar(content: Text(ErrorMapper.message(e))),
+        );
       }
     }
   }
@@ -493,7 +509,9 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+        ).showSnackBar(
+          SnackBar(content: Text(ErrorMapper.message(e))),
+        );
       }
     }
   }
@@ -926,12 +944,49 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
         );
       }
     }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ErrorMapper.message(e)),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_loadError != null && coachData == null) {
+      return Scaffold(
+        backgroundColor: Colors.grey[100],
+        drawer: const AppDrawer(),
+        appBar: AppBar(
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                'assets/images/logo_whistle.png',
+                width: 28,
+                height: 28,
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.sports, color: Colors.white),
+              ),
+              const SizedBox(width: 8),
+              const Text('Coach'),
+            ],
+          ),
+          backgroundColor: const Color(0xFF003E85),
+          foregroundColor: Colors.white,
+        ),
+        body: RetryErrorView(
+          message: _loadError!,
+          onRetry: fetchDashboardData,
+        ),
+      );
     }
 
     return Scaffold(
