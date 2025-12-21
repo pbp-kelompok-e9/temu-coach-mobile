@@ -3,7 +3,6 @@ import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../widgets/app_drawer.dart';
-import '../providers/review_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
@@ -33,13 +32,6 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
   void initState() {
     super.initState();
     fetchDashboardData();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final reviewProvider = context.read<ReviewProvider>();
-      if (coachData?['id'] != null) {
-        reviewProvider.fetchReviewsByCoach(coachData!['id']);
-      }
-    });
   }
 
   void _redirectToLogin() {
@@ -109,8 +101,6 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
           isLoading = false;
           _loadError = null;
         });
-        final reviewProvider = context.read<ReviewProvider>();
-        await reviewProvider.fetchReviewsByCoach(coachData!['id']);
       } else if (status == 'error') {
         final error = response['error'];
         final message = response['message'] ?? 'Terjadi kesalahan';
