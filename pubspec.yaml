@@ -38,7 +38,12 @@ dependencies:
   pbp_django_auth: ^0.4.0
   intl: ^0.20.2
   http: ^1.5.0
+<<<<<<< HEAD
   connectivity_plus: ^6.1.4
+=======
+  image_picker: ^1.0.4
+  file_picker: ^6.0.0
+>>>>>>> 42077d9 (update foto profile coach)
 
 dev_dependencies:
   flutter_test:

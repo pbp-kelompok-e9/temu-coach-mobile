@@ -3,7 +3,15 @@ import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../widgets/app_drawer.dart';
+<<<<<<< HEAD
 import '../providers/review_provider.dart';
+=======
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:io';
+import 'dart:typed_data';
+>>>>>>> 42077d9 (update foto profile coach)
 
 class CoachDashboardPage extends StatefulWidget {
   const CoachDashboardPage({Key? key}) : super(key: key);
@@ -495,6 +503,7 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
   }
 
   void showEditProfileModal() {
+<<<<<<< HEAD
     final nameController = TextEditingController(
       text: coachData?['name'] ?? '',
     );
@@ -522,31 +531,134 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
     final descriptionController = TextEditingController(
       text: coachData?['description'] ?? '',
     );
+=======
+  final nameController = TextEditingController(text: coachData?['name'] ?? '');
+  final ageController = TextEditingController(text: coachData?['age']?.toString() ?? '');
+  final citizenshipController = TextEditingController(text: coachData?['citizenship'] ?? '');
+  final clubController = TextEditingController(text: coachData?['club'] ?? '');
+  final licenseController = TextEditingController(text: coachData?['license'] ?? '');
+  final formationController = TextEditingController(text: coachData?['preffered_formation'] ?? '');
+  final avgTermController = TextEditingController(text: coachData?['average_term_as_coach']?.toString() ?? '');
+  final rateController = TextEditingController(text: coachData?['rate_per_session']?.toString() ?? '');
+  final descriptionController = TextEditingController(text: coachData?['description'] ?? '');
+  
+  String? selectedImagePath;   
+  String? selectedImageName;
+  Uint8List? selectedImageBytes;  
+>>>>>>> 42077d9 (update foto profile coach)
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
+  showDialog(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setModalState) => AlertDialog(
         title: const Text('Edit Profile'),
         contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircleAvatar(
-                radius: 50,
-                backgroundImage: coachData?['foto'] != null
-                    ? NetworkImage('$baseUrl${coachData!['foto']}')
-                    : null,
-                child: coachData?['foto'] == null
-                    ? const Icon(Icons.camera_alt, size: 40)
-                    : null,
+              
+              Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundImage: coachData?['foto'] != null
+                        ? NetworkImage('$baseUrl${coachData!['foto']}')
+                        : null,
+                    child: coachData?['foto'] == null
+                        ? const Icon(Icons.camera_alt, size: 40)
+                        : null,
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.blue[900],
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.edit, size: 20, color: Colors.white),
+                        onPressed: () async {
+                          if (kIsWeb) {
+                          
+                            try {
+                              FilePickerResult? result = await FilePicker.platform.pickFiles(
+                                type: FileType.image,
+                                allowMultiple: false,
+                              );
+                              
+                              if (result != null && result.files.first.bytes != null) {
+                                final bytes = result.files.first.bytes!;
+                                final fileName = result.files.first.name;
+                                
+                                setModalState(() {
+                                  selectedImageBytes = bytes;
+                                  selectedImageName = fileName;
+                                  selectedImagePath = null; 
+                                });
+                                
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Foto dipilih: $fileName'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error memilih foto: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          } else {
+                            
+                            try {
+                              final ImagePicker picker = ImagePicker();
+                              final XFile? image = await picker.pickImage(
+                                source: ImageSource.gallery,
+                                maxWidth: 800,
+                                maxHeight: 800,
+                                imageQuality: 85,
+                              );
+                              
+                              if (image != null) {
+                                setModalState(() {
+                                  selectedImagePath = image.path;
+                                  selectedImageName = image.name;
+                                  selectedImageBytes = null; 
+                                });
+                                
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Foto dipilih: ${image.name}'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error memilih foto: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              if (kIsWeb)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8.0),
+              if (selectedImageName != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
-                    'Upload foto tidak tersedia di web',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    'Foto baru: $selectedImageName',
+                    style: const TextStyle(fontSize: 12, color: Colors.green),
                   ),
                 ),
               const SizedBox(height: 24),
@@ -692,6 +804,9 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
                 avgTerm: avgTermController.text,
                 rate: rateController.text,
                 description: descriptionController.text,
+                imagePath: selectedImagePath,      
+                imageBytes: selectedImageBytes,    
+                imageName: selectedImageName,      
               );
               if (mounted) Navigator.pop(context);
             },
@@ -703,9 +818,11 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
+<<<<<<< HEAD
   Future<void> updateProfile({
     required String name,
     required String age,
@@ -733,6 +850,109 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
             'description': description,
           });
 
+=======
+Future<void> updateProfile({
+  required String name,
+  required String age,
+  required String citizenship,
+  required String club,
+  required String license,
+  required String formation,
+  required String avgTerm,
+  required String rate,
+  required String description,
+  String? imagePath,      
+  Uint8List? imageBytes,  
+  String? imageName,     
+}) async {
+  final request = context.read<CookieRequest>();
+  
+  try {
+
+    if ((imagePath != null && !kIsWeb) || (imageBytes != null && kIsWeb)) {
+      
+      var multipartRequest = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/coach/update_coach_profile/'),
+      );
+      
+     
+      multipartRequest.fields['name'] = name;
+      multipartRequest.fields['age'] = age;
+      multipartRequest.fields['citizenship'] = citizenship;
+      multipartRequest.fields['club'] = club;
+      multipartRequest.fields['license'] = license;
+      multipartRequest.fields['preffered_formation'] = formation;
+      multipartRequest.fields['average_term_as_coach'] = avgTerm;
+      multipartRequest.fields['rate_per_session'] = rate;
+      multipartRequest.fields['description'] = description;
+      
+   
+      if (kIsWeb && imageBytes != null) {
+       
+        multipartRequest.files.add(
+          http.MultipartFile.fromBytes(
+            'foto',
+            imageBytes,
+            filename: imageName ?? 'profile.jpg',
+          ),
+        );
+      } else if (!kIsWeb && imagePath != null) {
+       
+        multipartRequest.files.add(
+          await http.MultipartFile.fromPath('foto', imagePath),
+        );
+      }
+      
+      try {
+        if (request.cookies.isNotEmpty) {
+          String cookieHeader = request.cookies.entries
+              .where((e) => e.key != null && e.value != null)
+              .map((e) => '${e.key}=${e.value}')
+              .join('; ');
+          if (cookieHeader.isNotEmpty) {
+            multipartRequest.headers['Cookie'] = cookieHeader;
+          }
+        }
+      } catch (e) {
+        print('Error adding cookie header: $e');
+      }
+      
+      var streamedResponse = await multipartRequest.send();
+      var response = await http.Response.fromStream(streamedResponse);
+      
+      if (response.statusCode == 200) {
+        await fetchDashboardData();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile dan foto berhasil diupdate!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        throw Exception('Upload gagal: ${response.statusCode} - ${response.body}');
+      }
+      
+    } else {
+      final response = await request.post(
+        '$baseUrl/coach/update_coach_profile/',
+        {
+          'name': name,
+          'age': age,
+          'citizenship': citizenship,
+          'club': club,
+          'license': license,
+          'preffered_formation': formation,
+          'average_term_as_coach': avgTerm,
+          'rate_per_session': rate,
+          'description': description,
+        }
+      );
+      
+>>>>>>> 42077d9 (update foto profile coach)
       if (response['status'] == 'success') {
         await fetchDashboardData();
 
@@ -741,15 +961,30 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
             const SnackBar(content: Text('Profile berhasil diupdate')),
           );
         }
+<<<<<<< HEAD
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+=======
+      } else {
+        throw Exception(response['message'] ?? 'Update gagal');
+>>>>>>> 42077d9 (update foto profile coach)
       }
     }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
+}
 
   @override
   Widget build(BuildContext context) {

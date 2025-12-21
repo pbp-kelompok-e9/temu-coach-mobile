@@ -3,7 +3,11 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+<<<<<<< HEAD
   connectivity_plus
+=======
+  file_selector_windows
+>>>>>>> 42077d9 (update foto profile coach)
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
