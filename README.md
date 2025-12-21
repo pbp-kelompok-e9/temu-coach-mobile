@@ -101,6 +101,7 @@ Aplikasi mobile berkomunikasi dengan backend Django (PWS) melalui web service (J
 ## Design (Figma)
 [Link Figma](https://www.figma.com/design/Kl4YECItsI2E932xoYIP8O/TemuCoach-UI-UX-Design?node-id=0-1&p=f&t=wNcKrVE8xbU9RZCe-0)
 
-
+## Video Promosi
+[Link Video](https://drive.google.com/file/d/1G6PW3Oq84uwbubOat9WsH1C-wwm8wpZZ/view?usp=drivesdk)
 
 
