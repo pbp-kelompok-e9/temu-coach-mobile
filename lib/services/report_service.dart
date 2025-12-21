@@ -13,21 +13,15 @@ class ReportService {
     }
 
     final url =
-        'https://erico-putra-temucoach.pbp.cs.ui.ac.id/reports/create/coach/$coachId/';
+        'https://erico-putra-temucoach.pbp.cs.ui.ac.id/reviews/report/$coachId/';
 
     try {
-      print('SEND REPORT TO: $url');
-      print('reason = $reason');
-
       final resp = await request.post(url, {
         'reason': reason,
       });
 
-      print('REPORT RESPONSE: $resp');
-
       return resp['success'] == true;
     } catch (e) {
-      print('REPORT ERROR: $e');
       rethrow;
     }
   }

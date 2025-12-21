@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
+import 'package:temu_coach_mobile/screens/report_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/coach_provider.dart';
 import 'providers/admin_provider.dart';
@@ -73,6 +74,12 @@ class MyApp extends StatelessWidget {
 
             return MaterialPageRoute(
               builder: (context) => ReviewScreen(bookingId: bookingId),
+            );
+          }
+          if (settings.name == '/report') {
+            final coachId = settings.arguments as int; // Mengambil coachId dari argumen
+            return MaterialPageRoute(
+              builder: (context) => ReportScreen(coachId: coachId), // Pastikan nama class di screen sesuai
             );
           }
           return null;
