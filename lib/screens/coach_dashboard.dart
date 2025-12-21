@@ -831,84 +831,101 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
   }
 
   Future<void> updateProfile({
-    required String name,
-    required String age,
-    required String citizenship,
-    required String club,
-    required String license,
-    required String formation,
-    required String avgTerm,
-    required String rate,
-    required String description,
-    String? imagePath,
-    Uint8List? imageBytes,
-    String? imageName,
-  }) async {
-    final request = context.read<CookieRequest>();
+  required String name,
+  required String age,
+  required String citizenship,
+  required String club,
+  required String license,
+  required String formation,
+  required String avgTerm,
+  required String rate,
+  required String description,
+  String? imagePath,
+  Uint8List? imageBytes,
+  String? imageName,
+}) async {
+  final request = context.read<CookieRequest>();
 
-    try {
-      if ((imagePath != null && !kIsWeb) || (imageBytes != null && kIsWeb)) {
-        var multipartRequest = http.MultipartRequest(
-          'POST',
-          Uri.parse('$baseUrl/coach/update_coach_profile/'),
+  try {
+
+    if ((imagePath != null && !kIsWeb) || (imageBytes != null && kIsWeb)) {
+      var multipartRequest = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/coach/update_coach_profile/'),
+      );
+
+ 
+      multipartRequest.fields['name'] = name;
+      multipartRequest.fields['age'] = age;
+      multipartRequest.fields['citizenship'] = citizenship;
+      multipartRequest.fields['club'] = club;
+      multipartRequest.fields['license'] = license;
+      multipartRequest.fields['preffered_formation'] = formation;
+      multipartRequest.fields['average_term_as_coach'] = avgTerm;
+      multipartRequest.fields['rate_per_session'] = rate;
+      multipartRequest.fields['description'] = description;
+
+      if (kIsWeb && imageBytes != null) {
+     
+        multipartRequest.files.add(
+          http.MultipartFile.fromBytes(
+            'foto',
+            imageBytes,
+            filename: imageName ?? 'profile.jpg',
+          ),
         );
+      } else if (!kIsWeb && imagePath != null) {
+     
+        multipartRequest.files.add(
+          await http.MultipartFile.fromPath('foto', imagePath),
+        );
+      }
 
-        multipartRequest.fields['name'] = name;
-        multipartRequest.fields['age'] = age;
-        multipartRequest.fields['citizenship'] = citizenship;
-        multipartRequest.fields['club'] = club;
-        multipartRequest.fields['license'] = license;
-        multipartRequest.fields['preffered_formation'] = formation;
-        multipartRequest.fields['average_term_as_coach'] = avgTerm;
-        multipartRequest.fields['rate_per_session'] = rate;
-        multipartRequest.fields['description'] = description;
+      try {
+        if (request.cookies.isNotEmpty) {
+          String cookieHeader = request.cookies.entries
+              .where((e) => e.key != null && e.value != null)
+              .map((e) => '${e.key}=${e.value}')
+              .join('; ');
+          if (cookieHeader.isNotEmpty) {
+            multipartRequest.headers['Cookie'] = cookieHeader;
+          }
+        }
+      } catch (e) {
+        print('⚠️ Error setting cookies: $e');
+      }
 
-        if (kIsWeb && imageBytes != null) {
-          multipartRequest.files.add(
-            http.MultipartFile.fromBytes(
-              'foto',
-              imageBytes,
-              filename: imageName ?? 'profile.jpg',
-            ),
-          );
-        } else if (!kIsWeb && imagePath != null) {
-          multipartRequest.files.add(
-            await http.MultipartFile.fromPath('foto', imagePath),
-          );
+      var streamedResponse = await multipartRequest.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      print('📤 Upload response status: ${response.statusCode}');
+      print('📤 Upload response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        if (coachData?['foto'] != null) {
+          try {
+            final imageUrl = '$baseUrl${coachData!['foto']}';
+            await precacheImage(NetworkImage(imageUrl), context);
+            
+            NetworkImage(imageUrl).evict();
+          } catch (e) {
+            print('⚠️ Error clearing cache: $e');
+          }
         }
 
-        try {
-          if (request.cookies.isNotEmpty) {
-            String cookieHeader = request.cookies.entries
-                .where((e) => e.key != null && e.value != null)
-                .map((e) => '${e.key}=${e.value}')
-                .join('; ');
-            if (cookieHeader.isNotEmpty) {
-              multipartRequest.headers['Cookie'] = cookieHeader;
-            }
-          }
-        } catch (e) {}
+        await fetchDashboardData();
 
-        var streamedResponse = await multipartRequest.send();
-        var response = await http.Response.fromStream(streamedResponse);
-
-        if (response.statusCode == 200) {
-          await fetchDashboardData();
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Profile dan foto berhasil diupdate!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        } else {
-          throw Exception(
-            'Upload gagal: ${response.statusCode} - ${response.body}',
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile dan foto berhasil diupdate!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+            ),
           );
         }
       } else {
+<<<<<<< HEAD
         final response = await request
             .post('$baseUrl/coach/update_coach_profile/', {
               'name': name,
@@ -936,14 +953,56 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
       }
     } catch (e) {
       if (!mounted) return;
+=======
+        throw Exception(
+          'Upload gagal: ${response.statusCode} - ${response.body}',
+        );
+      }
+    } else {
+      final response = await request.post(
+        '$baseUrl/coach/update_coach_profile/',
+        {
+          'name': name,
+          'age': age,
+          'citizenship': citizenship,
+          'club': club,
+          'license': license,
+          'preffered_formation': formation,
+          'average_term_as_coach': avgTerm,
+          'rate_per_session': rate,
+          'description': description,
+        },
+      );
+
+      if (response['status'] == 'success') {
+        await fetchDashboardData();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile berhasil diupdate'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        throw Exception(response['message'] ?? 'Update gagal');
+      }
+    }
+  } catch (e) {
+    print('❌ Error updating profile: $e');
+    if (mounted) {
+>>>>>>> 8d90721 (fix bug upload foto)
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(ErrorMapper.message(e)),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
         ),
       );
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
