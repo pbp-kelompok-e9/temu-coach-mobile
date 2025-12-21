@@ -11,7 +11,8 @@ import 'dart:typed_data';
 import '../utils/error_mapper.dart';
 import '../widgets/retry_error_view.dart';
 import 'dart:io' if (dart.library.html) 'dart:html' as io;
-import 'dart:convert'; 
+import 'dart:convert';
+import 'dart:io' show File; 
 
 class CoachDashboardPage extends StatefulWidget {
   const CoachDashboardPage({Key? key}) : super(key: key);
@@ -857,7 +858,8 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
     print('🔍 Cookie count: ${request.cookies.length}');
     
     // Print cookie values (first 10 chars only for security)
-    request.cookies.forEach((key, value) {
+    request.cookies.forEach((key, cookie) {
+      final value = cookie.value;  // ← Extract value from Cookie object
       final preview = value.length > 10 ? '${value.substring(0, 10)}...' : value;
       print('🔍 Cookie[$key]: $preview');
     });
@@ -925,16 +927,15 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
 
       // Check for sessionid (might be named 'sessionid' or 'session')
       if (request.cookies.containsKey('sessionid')) {
-        sessionId = request.cookies['sessionid'];
+        sessionId = request.cookies['sessionid']?.value;  // ← Add .value
         print('🍪 Found sessionid: ${sessionId?.substring(0, 10)}...');
       } else if (request.cookies.containsKey('session')) {
-        sessionId = request.cookies['session'];
+        sessionId = request.cookies['session']?.value;  // ← Add .value
         print('🍪 Found session: ${sessionId?.substring(0, 10)}...');
       }
 
-      // Check for CSRF token
       if (request.cookies.containsKey('csrftoken')) {
-        csrfToken = request.cookies['csrftoken'];
+        csrfToken = request.cookies['csrftoken']?.value;  // ← Add .value
         print('🍪 Found csrftoken: ${csrfToken?.substring(0, 10)}...');
       }
 
