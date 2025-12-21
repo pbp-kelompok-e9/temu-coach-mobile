@@ -10,6 +10,7 @@ import 'providers/review_provider.dart';
 import 'providers/report_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/review_screen.dart';
+import 'screens/startup_screen.dart';
 import 'services/connectivity_service.dart';
 import 'theme/app_theme.dart';
 
@@ -64,7 +65,7 @@ class MyApp extends StatelessWidget {
         title: 'TemuCoach',
         theme: AppTheme.lightTheme,
         debugShowCheckedModeBanner: false,
-        home: const LoginScreen(),
+        home: const StartupScreen(),
         routes: {
           '/login': (context) => const LoginScreen(),
         },

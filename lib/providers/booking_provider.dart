@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../models/booking_model.dart';
 import '../services/booking_service.dart';
+import '../utils/error_mapper.dart';
 
 class BookingProvider with ChangeNotifier {
   final CookieRequest request;
@@ -37,7 +38,7 @@ class BookingProvider with ChangeNotifier {
       final list = await _service.fetchBookings();
       _bookings = list;
     } catch (e) {
-      _setError(e.toString());
+      _setError(ErrorMapper.message(e));
     } finally {
       _setLoading(false);
     }
@@ -51,7 +52,7 @@ class BookingProvider with ChangeNotifier {
       final booking = await _service.fetchBookingDetail(id);
       return booking;
     } catch (e) {
-      _setError(e.toString());
+      _setError(ErrorMapper.message(e));
       return null;
     } finally {
       _setLoading(false);
@@ -70,8 +71,9 @@ class BookingProvider with ChangeNotifier {
       }
       return response;
     } catch (e) {
-      _setError(e.toString());
-      return BookingResponse(success: false, error: e.toString());
+      final msg = ErrorMapper.message(e);
+      _setError(msg);
+      return BookingResponse(success: false, error: msg);
     } finally {
       _setLoading(false);
     }
@@ -89,8 +91,9 @@ class BookingProvider with ChangeNotifier {
       }
       return response;
     } catch (e) {
-      _setError(e.toString());
-      return BookingResponse(success: false, error: e.toString());
+      final msg = ErrorMapper.message(e);
+      _setError(msg);
+      return BookingResponse(success: false, error: msg);
     } finally {
       _setLoading(false);
     }
@@ -108,8 +111,9 @@ class BookingProvider with ChangeNotifier {
       }
       return response;
     } catch (e) {
-      _setError(e.toString());
-      return BookingResponse(success: false, error: e.toString());
+      final msg = ErrorMapper.message(e);
+      _setError(msg);
+      return BookingResponse(success: false, error: msg);
     } finally {
       _setLoading(false);
     }

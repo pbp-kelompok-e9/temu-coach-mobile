@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../models/review_model.dart';
+import '../utils/error_mapper.dart';
 
 class ReviewProvider with ChangeNotifier {
   final CookieRequest request;
@@ -53,6 +54,7 @@ class ReviewProvider with ChangeNotifier {
     } catch (e) {
       hasReviewed = false;
       userReview = null;
+      error = ErrorMapper.message(e);
     } finally {
       loading = false;
       notifyListeners();
@@ -88,6 +90,7 @@ class ReviewProvider with ChangeNotifier {
       }
 
     } catch (e) {
+      error = ErrorMapper.message(e);
       return false;
     }
   }
@@ -126,6 +129,7 @@ class ReviewProvider with ChangeNotifier {
       }
 
     } catch (e) {
+      error = ErrorMapper.message(e);
       return false;
     }
   }
@@ -151,6 +155,7 @@ class ReviewProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
+      error = ErrorMapper.message(e);
       return false;
     }
   }
@@ -188,7 +193,7 @@ class ReviewProvider with ChangeNotifier {
         coachReviews = [];
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMapper.message(e);
     } finally {
       loading = false;
       notifyListeners();

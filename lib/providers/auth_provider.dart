@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/connectivity_service.dart';
+import '../utils/error_mapper.dart';
 
 class AuthProvider with ChangeNotifier {
   static const _kSavedUsername = 'auth.saved_username';
@@ -44,7 +45,8 @@ class AuthProvider with ChangeNotifier {
   /// Attempt auto-login using saved credentials.
   /// Returns true if login succeeds, false otherwise.
   Future<bool> tryAutoLogin() async {
-    if (!ConnectivityService().isConnected) {
+    final online = await ConnectivityService().checkConnectivity();
+    if (!online) {
       return false;
     }
     final creds = await _loadCredentials();
@@ -76,7 +78,8 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<bool> login(String username, String password, {bool persist = true}) async {
-    if (!ConnectivityService().isConnected) {
+    final online = await ConnectivityService().checkConnectivity();
+    if (!online) {
       _setError('Tidak ada koneksi internet');
       return false;
     }
@@ -103,14 +106,7 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
-      final msg = e.toString();
-      if (msg.contains('SocketException') ||
-          msg.contains('Failed host lookup') ||
-          msg.contains('ClientException')) {
-        _setError('Tidak ada koneksi internet');
-      } else {
-        _setError('Terjadi kesalahan: $msg');
-      }
+      _setError(ErrorMapper.message(e));
       _setLoading(false);
       return false;
     }
@@ -124,7 +120,8 @@ class AuthProvider with ChangeNotifier {
     String? firstName,
     String? lastName,
   }) async {
-    if (!ConnectivityService().isConnected) {
+    final online = await ConnectivityService().checkConnectivity();
+    if (!online) {
       _setError('Tidak ada koneksi internet');
       return false;
     }
@@ -151,14 +148,7 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
-      final msg = e.toString();
-      if (msg.contains('SocketException') ||
-          msg.contains('Failed host lookup') ||
-          msg.contains('ClientException')) {
-        _setError('Tidak ada koneksi internet');
-      } else {
-        _setError('Terjadi kesalahan: $msg');
-      }
+      _setError(ErrorMapper.message(e));
       _setLoading(false);
       return false;
     }
@@ -180,7 +170,8 @@ class AuthProvider with ChangeNotifier {
     required int ratePerSession,
     String? description,
   }) async {
-    if (!ConnectivityService().isConnected) {
+    final online = await ConnectivityService().checkConnectivity();
+    if (!online) {
       _setError('Tidak ada koneksi internet');
       return false;
     }
@@ -214,14 +205,7 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
-      final msg = e.toString();
-      if (msg.contains('SocketException') ||
-          msg.contains('Failed host lookup') ||
-          msg.contains('ClientException')) {
-        _setError('Tidak ada koneksi internet');
-      } else {
-        _setError('Terjadi kesalahan: $msg');
-      }
+      _setError(ErrorMapper.message(e));
       _setLoading(false);
       return false;
     }

@@ -11,6 +11,8 @@ import '../theme/app_theme.dart';
 import '../widgets/calendar_widget.dart';
 import '../widgets/time_slots_widget.dart';
 import '../widgets/booking_form_section.dart';
+import '../utils/error_mapper.dart';
+import '../widgets/retry_error_view.dart';
 
 class CoachDetailScreen extends StatefulWidget {
   final int coachId;
@@ -92,7 +94,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> {
       });
     } catch (e) {
       setState(() {
-        error = e.toString();
+        error = ErrorMapper.message(e);
       });
     } finally {
       if (mounted) {
@@ -161,7 +163,10 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : error != null
-          ? Center(child: Text('Error: $error'))
+          ? RetryErrorView(
+              message: error!,
+              onRetry: _load,
+            )
           : coach == null
           ? const Center(child: Text('Coach not found'))
           : SingleChildScrollView(

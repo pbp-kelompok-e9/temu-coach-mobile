@@ -6,6 +6,7 @@ import '../providers/customer_provider.dart';
 import '../models/coach_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/retry_error_view.dart';
 import 'coach_detail_screen.dart';
 import 'customer_dashboard.dart';
 
@@ -133,28 +134,9 @@ class _CoachCatalogScreenState extends State<CoachCatalogScreen> {
                 }
 
                 if (provider.error != null) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          size: 60,
-                          color: Colors.red,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          provider.error!,
-                          style: const TextStyle(color: Colors.red),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => provider.fetchCoaches(),
-                          child: const Text('Coba Lagi'),
-                        ),
-                      ],
-                    ),
+                  return RetryErrorView(
+                    message: provider.error!,
+                    onRetry: () => provider.fetchCoaches(),
                   );
                 }
 

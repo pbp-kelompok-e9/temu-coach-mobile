@@ -7,6 +7,7 @@ import '../models/chat_message.dart';
 import '../services/chat_service.dart';
 import '../services/connectivity_service.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/retry_error_view.dart';
 import 'chat_room_screen.dart';
 
 class ChatListScreen extends StatefulWidget {
@@ -363,35 +364,6 @@ class _ChatListScreenState extends State<ChatListScreen>
             ),
           ),
           
-          // Error message
-          if (_errorMessage != null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: BoxDecoration(
-                color: Colors.red[50],
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.red[200]!),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.error_outline, color: Colors.red[700]),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      _errorMessage!,
-                      style: TextStyle(color: Colors.red[700]),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: _loadData,
-                    child: const Text('Coba Lagi'),
-                  ),
-                ],
-              ),
-            ),
-          
           // Tab content
           Expanded(
             child: Container(
@@ -431,6 +403,13 @@ class _ChatListScreenState extends State<ChatListScreen>
         child: CircularProgressIndicator(
           color: Color(0xFFDE3400),
         ),
+      );
+    }
+
+    if (_errorMessage != null && _conversations.isEmpty) {
+      return RetryErrorView(
+        message: _errorMessage!,
+        onRetry: _loadData,
       );
     }
     
@@ -666,6 +645,13 @@ class _ChatListScreenState extends State<ChatListScreen>
     }
     
     final contacts = _filteredContacts;
+
+    if (!_isOnline && contacts.isEmpty) {
+      return RetryErrorView(
+        message: 'Tidak ada koneksi internet',
+        onRetry: _loadData,
+      );
+    }
     
     if (contacts.isEmpty) {
       return Center(

@@ -1,6 +1,7 @@
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'dart:convert';
 import '../models/user_model.dart';
+import '../utils/error_mapper.dart';
 
 class AuthService {
   static const String baseUrl = 'https://erico-putra-temucoach.pbp.cs.ui.ac.id';
@@ -38,7 +39,7 @@ class AuthService {
     } catch (e) {
       return {
         'success': false,
-        'message': 'Terjadi kesalahan: ${e.toString()}',
+        'message': ErrorMapper.message(e),
       };
     }
   }
@@ -82,7 +83,7 @@ class AuthService {
     } catch (e) {
       return {
         'success': false,
-        'message': 'Terjadi kesalahan: ${e.toString()}',
+        'message': ErrorMapper.message(e),
       };
     }
   }
@@ -147,7 +148,7 @@ class AuthService {
     } catch (e) {
       return {
         'success': false,
-        'message': 'Terjadi kesalahan: ${e.toString()}',
+        'message': ErrorMapper.message(e),
       };
     }
   }
@@ -173,7 +174,7 @@ class AuthService {
     } catch (e) {
       return {
         'success': false,
-        'message': 'Terjadi kesalahan: ${e.toString()}',
+        'message': ErrorMapper.message(e),
       };
     }
   }
