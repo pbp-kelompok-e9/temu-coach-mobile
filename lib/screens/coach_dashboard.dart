@@ -925,35 +925,6 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
           );
         }
       } else {
-<<<<<<< HEAD
-        final response = await request
-            .post('$baseUrl/coach/update_coach_profile/', {
-              'name': name,
-              'age': age,
-              'citizenship': citizenship,
-              'club': club,
-              'license': license,
-              'preffered_formation': formation,
-              'average_term_as_coach': avgTerm,
-              'rate_per_session': rate,
-              'description': description,
-            });
-
-        if (response['status'] == 'success') {
-          await fetchDashboardData();
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Profile berhasil diupdate')),
-            );
-          }
-        } else {
-          throw Exception(response['message'] ?? 'Update gagal');
-        }
-      }
-    } catch (e) {
-      if (!mounted) return;
-=======
         throw Exception(
           'Upload gagal: ${response.statusCode} - ${response.body}',
         );
@@ -992,7 +963,6 @@ class _CoachDashboardPageState extends State<CoachDashboardPage> {
   } catch (e) {
     print('❌ Error updating profile: $e');
     if (mounted) {
->>>>>>> 8d90721 (fix bug upload foto)
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(ErrorMapper.message(e)),
