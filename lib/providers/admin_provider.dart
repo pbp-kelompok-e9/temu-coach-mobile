@@ -35,6 +35,12 @@ class AdminProvider with ChangeNotifier {
 
       allReports = List<dynamic>.from(resp['reports'] ?? []);
       _applySort();
+
+      final coachResp =
+        await request.get('$baseUrl/my_admin/api/coach-requests/');
+
+      coachRequests = List<dynamic>.from(coachResp['requests'] ?? []);
+      
     } catch (e) {
       error = ErrorMapper.message(e);
     } finally {
@@ -92,7 +98,6 @@ class AdminProvider with ChangeNotifier {
             : countA.compareTo(countB);
       }
 
-      // fallback: newest first
       return b['created_at'].compareTo(a['created_at']);
     });
   }
