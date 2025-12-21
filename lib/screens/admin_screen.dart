@@ -16,6 +16,7 @@ class AdminScreen extends StatefulWidget {
 }
 
 class _AdminScreenState extends State<AdminScreen> {
+  
   @override
   void initState() {
     super.initState();
@@ -153,8 +154,33 @@ class _AdminScreenState extends State<AdminScreen> {
                               borderColor: AppColors.accent,
                               primaryBtnText: "Ban Coach",
                               secondaryBtnText: "Delete Report",
-                              primaryAction: () => admin.ban(r["coach_id"]),
-                              secondaryAction: () => admin.deleteReport(r["id"]),
+                              primaryAction: () async {
+                                final coachUsername = r["coach_username"];
+                                final success = await admin.ban(r["coach_id"]);
+
+                                if (!context.mounted) return;
+
+                                _showSnack(
+                                  context,
+                                  success
+                                      ? 'Coach $coachUsername telah diban'
+                                      : 'Gagal melakukan ban pada coach $coachUsername',
+                                  success: success,
+                                );
+                              },
+                              secondaryAction: () async {
+                                final success = await admin.deleteReport(r["id"]);
+
+                                if (!context.mounted) return;
+
+                                _showSnack(
+                                  context,
+                                  success
+                                      ? 'Report berhasil dihapus'
+                                      : 'Gagal menghapus report',
+                                  success: success,
+                                );
+                              },
                             );
                           }).toList(),
                         ),
@@ -182,8 +208,34 @@ class _AdminScreenState extends State<AdminScreen> {
                               borderColor: AppColors.primary,
                               primaryBtnText: "Approve",
                               secondaryBtnText: "Delete Request",
-                              primaryAction: () => admin.approve(c["id"]),
-                              secondaryAction: () => admin.reject(c["id"]),
+                              primaryAction: () async {
+                                final coachName = c["name"]; // atau c["user_username"]
+                                final success = await admin.approve(c["id"]);
+
+                                if (!context.mounted) return;
+
+                                _showSnack(
+                                  context,
+                                  success
+                                      ? '$coachName berhasil di-approve sebagai coach'
+                                      : 'Gagal meng-approve $coachName sebagai coach',
+                                  success: success,
+                                );
+                              },
+                              secondaryAction: () async {
+                                final coachName = c["name"];
+                                final success = await admin.reject(c["id"]);
+
+                                if (!context.mounted) return;
+
+                                _showSnack(
+                                  context,
+                                  success
+                                      ? '$coachName tidak di-approve sebagai coach'
+                                      : 'Gagal menolak request $coachName',
+                                  success: success,
+                                );
+                              },
                             );
                           }).toList(),
                         ),
@@ -273,3 +325,20 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 }
+
+void _showSnack(
+  BuildContext context,
+  String message, {
+  bool success = true,
+}) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      backgroundColor: success ? Colors.green : Colors.red,
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 2),
+    ),
+  );
+}
+
+
